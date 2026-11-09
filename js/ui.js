@@ -85,6 +85,12 @@ function copyResult(targetId) {
   if (!target) return;
 
   var text = target.innerHTML.replace(/<br\s*\/?>/gi, "\n").trim();
+  copyText(text);
+}
+
+/* 复制任意纯文本：整体用反引号包裹，便于粘贴到 Markdown */
+function copyText(text) {
+  text = (text || "").trim();
   if (!text) { showToast("还没有可复制的结果"); return; }
 
   var area = document.createElement("textarea");

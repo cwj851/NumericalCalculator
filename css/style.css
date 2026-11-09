@@ -621,6 +621,79 @@ body::before {
   color: var(--muted);
 }
 
+/* ---------- 计算过程（数值积分） ---------- */
+.steps { display: flex; flex-direction: column; gap: 9px; }
+
+.step-line {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.85;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.step-line b {
+  margin-right: 4px;
+  font-weight: 800;
+  color: var(--accent-ink);
+}
+
+.step-formula {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+  border: 1.5px solid rgba(23, 28, 52, 0.05);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.8;
+  color: var(--accent-ink);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.step-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.step-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.step-table th,
+.step-table td { padding: 7px 12px; text-align: right; }
+
+.step-table th {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-weight: 800;
+}
+
+.step-table td { border-top: 1px solid var(--line); color: var(--ink); }
+
+.step-table th:first-child,
+.step-table td:first-child { text-align: left; }
+
+.step-table tr.ellipsis td {
+  text-align: center;
+  color: var(--muted);
+  letter-spacing: 3px;
+}
+
+.step-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+
 /* ---------- 手机端输入回显条 ----------
    键盘在页面下方时，靠这条吸顶的窄条显示“当前在编辑哪个框、输入了什么” */
 .echo-bar { display: none; }
