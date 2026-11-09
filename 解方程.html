@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>解方程 · 数值计算器</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body class="theme-solve">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="back-btn" href="index.html">← 首页</a>
+      <div class="titles">
+        <h1>解方程</h1>
+        <p>求一元方程的精确解，分数解同时给出小数</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <div class="workspace">
+
+      <section class="card">
+        <h2 class="card-title">输入方程</h2>
+
+        <label class="field">
+          <span>方程（未知数用 x 表示）</span>
+          <input type="text" id="equation" placeholder="例如 x^2-1=0、2x+3=7、sin(x)=0.5" data-enter="solveEquation" />
+        </label>
+
+        <div class="actions">
+          <button type="button" class="btn btn-primary" onclick="solveEquation()">求 解</button>
+          <button type="button" class="btn btn-ghost" onclick="copyResult('solution')">复制结果</button>
+          <button type="button" class="btn btn-ghost" onclick="clearInputs()">清 除</button>
+        </div>
+
+        <p id="solution" class="result" data-empty="结果将显示在这里"></p>
+
+        <div class="examples">
+          <p>试试这些例子</p>
+          <div class="example-row">
+            <button type="button" class="example" onclick="useExample('x^2-1=0')">x²-1=0</button>
+            <button type="button" class="example" onclick="useExample('2x+3=7')">2x+3=7</button>
+            <button type="button" class="example" onclick="useExample('x^2-4x+4=0')">x²-4x+4=0</button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="card side">
+        <h2 class="card-title">输入面板</h2>
+        <p class="card-note">等号两侧各写一个表达式；符号插入到光标所在位置。</p>
+
+        <div class="chips">
+          <button type="button" class="chip chip-key" onclick="insertSymbol('x')">x</button>
+          <button type="button" class="chip" onclick="insertSymbol('=')">=</button>
+          <button type="button" class="chip" onclick="insertSymbol('^')">x<sup>y</sup></button>
+          <button type="button" class="chip" onclick="insertSymbol('(')">(</button>
+          <button type="button" class="chip" onclick="insertSymbol(')')">)</button>
+          <button type="button" class="chip" onclick="insertSymbol('sqrt()')">√</button>
+          <button type="button" class="chip" onclick="insertSymbol('pi')">π</button>
+          <button type="button" class="chip" onclick="insertSymbol('e')">e</button>
+          <button type="button" class="chip" onclick="insertSymbol('sin()')">sin</button>
+          <button type="button" class="chip" onclick="insertSymbol('cos()')">cos</button>
+          <button type="button" class="chip" onclick="insertSymbol('tan()')">tan</button>
+          <button type="button" class="chip" onclick="insertSymbol('ln()')">ln</button>
+          <button type="button" class="chip" onclick="insertSymbol('log10()')">log</button>
+        </div>
+
+        <div class="keypad">
+          <button type="button" class="key" onclick="insertSymbol('7')">7</button>
+          <button type="button" class="key" onclick="insertSymbol('8')">8</button>
+          <button type="button" class="key" onclick="insertSymbol('9')">9</button>
+          <button type="button" class="key op" onclick="insertSymbol('/')">÷</button>
+
+          <button type="button" class="key" onclick="insertSymbol('4')">4</button>
+          <button type="button" class="key" onclick="insertSymbol('5')">5</button>
+          <button type="button" class="key" onclick="insertSymbol('6')">6</button>
+          <button type="button" class="key op" onclick="insertSymbol('*')">×</button>
+
+          <button type="button" class="key" onclick="insertSymbol('1')">1</button>
+          <button type="button" class="key" onclick="insertSymbol('2')">2</button>
+          <button type="button" class="key" onclick="insertSymbol('3')">3</button>
+          <button type="button" class="key op" onclick="insertSymbol('-')">−</button>
+
+          <button type="button" class="key" onclick="insertSymbol('0')">0</button>
+          <button type="button" class="key" onclick="insertSymbol('.')">.</button>
+          <button type="button" class="key back" onclick="backspace()">⌫</button>
+          <button type="button" class="key op" onclick="insertSymbol('+')">+</button>
+        </div>
+      </aside>
+
+    </div>
+  </main>
+
+  <div id="toast" class="toast">已复制</div>
+
+  <script src="js/nerdamer.core.js"></script>
+  <script src="js/Algebra.js"></script>
+  <script src="js/Calculus.js"></script>
+  <script src="js/Solve.js"></script>
+  <script src="js/ui.js"></script>
+
+  <script>
+    function clearInputs() {
+      clearFields(["equation"]);
+    }
+
+    function useExample(equation) {
+      document.getElementById("equation").value = equation;
+      solveEquation();
+    }
+
+    function solveEquation() {
+      var equation = document.getElementById("equation").value.trim();
+      var solutionEl = document.getElementById("solution");
+
+      if (equation === "") { solutionEl.innerHTML = "请输入方程."; return; }
+
+      try {
+        var solutions = nerdamer.solveEquations(equation);
+        if (!solutions || solutions.length === 0) {
+          solutionEl.innerHTML = "未求得解：请检查方程写法（未知数用 x 表示）.";
+          return;
+        }
+
+        var solutionText = "对方程  " + equation + "  求解得:<br>";
+        solutions.forEach(function (solution, index) {
+          var solutionValue = solution.text();
+          solutionText += "x" + (index + 1) + "=" + solutionValue + "<br>";
+
+          // 检查解是否为分数
+          if (solutionValue.includes("/")) {
+            // 如果是分数，则再计算一次浮点数结果
+            var floatValue = nerdamer(solutionValue).evaluate().text();
+            solutionText +=
+              "(浮点数结果: x" + (index + 1) + "=" + floatValue + ")<br>";
+          }
+        });
+
+        solutionEl.innerHTML = solutionText;
+      } catch (e) {
+        solutionEl.innerHTML = "求解失败：请检查方程写法（未知数用 x 表示，等号两侧各有一个表达式）.";
+      }
+    }
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>数值计算器</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body class="theme-home">
+  <main class="shell">
+    <section class="hero">
+      <span class="eyebrow">NUMERICAL CALCULATOR</span>
+      <h1>数值计算器</h1>
+      <p>
+        面向《数值计算方法》课堂的符号运算与数值计算工具。下面每张卡片是一个独立功能，
+        点击卡片即可进入对应界面；所有计算都在本机浏览器中完成，无需联网。
+      </p>
+      <div class="quick-tags">
+        <span>符号运算</span>
+        <span>数值积分</span>
+        <span>离线可用</span>
+        <span>适配手机与电脑</span>
+      </div>
+    </section>
+
+    <section class="cards">
+      <a class="func-card c-eval" href="函数值.html">
+        <span class="func-icon">ƒ(x)</span>
+        <h2>函数值</h2>
+        <p>输入函数与 x 的取值，代入求出 f(x) 的数值结果；支持隐式乘号，如 2x、3sin(x)。</p>
+        <span class="tags"><span>数值代入</span><span>隐式乘号</span></span>
+        <span class="go">开始计算 →</span>
+      </a>
+
+      <a class="func-card c-solve" href="解方程.html">
+        <span class="func-icon">x =</span>
+        <h2>解方程</h2>
+        <p>求一元方程的根，给出精确解；当解为分数时，同时给出对应的浮点数结果。</p>
+        <span class="tags"><span>精确解</span><span>多解列举</span></span>
+        <span class="go">开始求解 →</span>
+      </a>
+
+      <a class="func-card c-diff" href="求导.html">
+        <span class="func-icon">d/dx</span>
+        <h2>求导</h2>
+        <p>对函数关于 x 求一阶导数，直接输出解析表达式，可用于验算手算结果。</p>
+        <span class="tags"><span>解析求导</span><span>表达式输出</span></span>
+        <span class="go">开始求导 →</span>
+      </a>
+
+      <a class="func-card c-int" href="不定积分.html">
+        <span class="func-icon">∫</span>
+        <h2>不定积分</h2>
+        <p>对函数关于 x 求不定积分，得到原函数表达式，适合与数值积分结果互相印证。</p>
+        <span class="tags"><span>符号积分</span><span>原函数</span></span>
+        <span class="go">开始积分 →</span>
+      </a>
+
+      <a class="func-card c-numint" href="数值积分.html">
+        <span class="func-icon">∫ᵃᵇ</span>
+        <h2>数值积分</h2>
+        <p>同一积分区间内并列使用六种算法：左/右矩形、梯形、辛普森、科特斯与自适应，便于对比精度。</p>
+        <span class="tags"><span>六种算法</span><span>精度对比</span></span>
+        <span class="go">开始积分 →</span>
+      </a>
+    </section>
+
+    <p class="page-foot">
+      自变量统一使用 x · 三角函数的参数采用弧度制 · 复制结果会自动包裹为 Markdown 行内代码
+    </p>
+  </main>
+</body>
+
+</html>

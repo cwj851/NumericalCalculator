@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>数值积分 · 数值计算器</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body class="theme-numint">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="back-btn" href="index.html">← 首页</a>
+      <div class="titles">
+        <h1>数值积分</h1>
+        <p>同一区间并列对比六种数值积分算法</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <nav class="tabs" role="tablist" aria-label="数值积分算法">
+      <button type="button" class="tab" role="tab" data-algo="1" onclick="selectAlgorithm(1)">左矩形</button>
+      <button type="button" class="tab" role="tab" data-algo="2" onclick="selectAlgorithm(2)">右矩形</button>
+      <button type="button" class="tab" role="tab" data-algo="3" onclick="selectAlgorithm(3)">梯形</button>
+      <button type="button" class="tab active" role="tab" aria-selected="true" data-algo="4"
+        onclick="selectAlgorithm(4)">辛普森</button>
+      <button type="button" class="tab" role="tab" data-algo="5" onclick="selectAlgorithm(5)">科特斯</button>
+      <button type="button" class="tab" role="tab" data-algo="6" onclick="selectAlgorithm(6)">自适应</button>
+    </nav>
+
+    <div class="workspace">
+
+      <div class="stack">
+
+        <section class="card">
+          <h2 class="card-title">函数与积分区间</h2>
+
+          <label class="field">
+            <span>被积函数 f(x)</span>
+            <input type="text" id="equation" placeholder="例如 x^2、sin(x)、1/(1+x^2)" data-enter="runIntegral" />
+          </label>
+
+          <div class="field-grid">
+            <label class="field">
+              <span>下限 a</span>
+              <input type="text" id="aValue" inputmode="decimal" placeholder="例如 0" data-enter="runIntegral" />
+            </label>
+            <label class="field">
+              <span>上限 b</span>
+              <input type="text" id="bValue" inputmode="decimal" placeholder="例如 1" data-enter="runIntegral" />
+            </label>
+          </div>
+
+          <label class="field" id="nField">
+            <span>分段数 n</span>
+            <input type="text" id="nValue" inputmode="numeric" placeholder="例如 10" />
+          </label>
+
+          <label class="field" id="tolField">
+            <span>精度 tol</span>
+            <input type="text" id="tolerance" inputmode="decimal" placeholder="例如 0.00005" />
+          </label>
+
+          <p class="algo-hint" id="algoHint"></p>
+
+          <div class="actions">
+            <button type="button" class="btn btn-primary" onclick="runIntegral()">计 算</button>
+            <button type="button" class="btn btn-ghost" onclick="clearInputs()">清 除</button>
+          </div>
+
+          <div class="examples">
+            <p>快速示例</p>
+            <div class="example-row">
+              <button type="button" class="example" onclick="useExample('x^2', '0', '1', '10')">∫₀¹ x² dx</button>
+              <button type="button" class="example" onclick="useExample('1/(1+x)', '0', '1', '10')">∫₀¹ 1/(1+x) dx</button>
+              <button type="button" class="example" onclick="useExample('e^x', '0', '1', '10')">∫₀¹ eˣ dx</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2 class="card-title">结果</h2>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="copyResult('result')">复制结果</button>
+          </div>
+          <p id="result" class="result" data-empty="选择顶部算法、填写区间后点击“计算”"></p>
+        </section>
+
+      </div>
+
+      <aside class="card side">
+        <h2 class="card-title">输入面板</h2>
+        <p class="card-note">符号插入到光标所在的输入框，可用于填写上下限与参数。</p>
+
+        <div class="chips">
+          <button type="button" class="chip chip-key" onclick="insertSymbol('x')">x</button>
+          <button type="button" class="chip" onclick="insertSymbol('^')">x<sup>y</sup></button>
+          <button type="button" class="chip" onclick="insertSymbol('(')">(</button>
+          <button type="button" class="chip" onclick="insertSymbol(')')">)</button>
+          <button type="button" class="chip" onclick="insertSymbol('sqrt()')">√</button>
+          <button type="button" class="chip" onclick="insertSymbol('pi')">π</button>
+          <button type="button" class="chip" onclick="insertSymbol('e')">e</button>
+          <button type="button" class="chip" onclick="insertSymbol('sin()')">sin</button>
+          <button type="button" class="chip" onclick="insertSymbol('cos()')">cos</button>
+          <button type="button" class="chip" onclick="insertSymbol('tan()')">tan</button>
+          <button type="button" class="chip" onclick="insertSymbol('ln()')">ln</button>
+          <button type="button" class="chip" onclick="insertSymbol('log10()')">log</button>
+        </div>
+
+        <div class="keypad">
+          <button type="button" class="key" onclick="insertSymbol('7')">7</button>
+          <button type="button" class="key" onclick="insertSymbol('8')">8</button>
+          <button type="button" class="key" onclick="insertSymbol('9')">9</button>
+          <button type="button" class="key op" onclick="insertSymbol('/')">÷</button>
+
+          <button type="button" class="key" onclick="insertSymbol('4')">4</button>
+          <button type="button" class="key" onclick="insertSymbol('5')">5</button>
+          <button type="button" class="key" onclick="insertSymbol('6')">6</button>
+          <button type="button" class="key op" onclick="insertSymbol('*')">×</button>
+
+          <button type="button" class="key" onclick="insertSymbol('1')">1</button>
+          <button type="button" class="key" onclick="insertSymbol('2')">2</button>
+          <button type="button" class="key" onclick="insertSymbol('3')">3</button>
+          <button type="button" class="key op" onclick="insertSymbol('-')">−</button>
+
+          <button type="button" class="key" onclick="insertSymbol('0')">0</button>
+          <button type="button" class="key" onclick="insertSymbol('.')">.</button>
+          <button type="button" class="key back" onclick="backspace()">⌫</button>
+          <button type="button" class="key op" onclick="insertSymbol('+')">+</button>
+        </div>
+      </aside>
+
+    </div>
+  </main>
+
+  <div id="toast" class="toast">已复制</div>
+
+  <script src="js/nerdamer.core.js"></script>
+  <script src="js/Algebra.js"></script>
+  <script src="js/Calculus.js"></script>
+  <script src="js/Solve.js"></script>
+  <script src="js/ui.js"></script>
+
+  <script>
+    var okToRoll = true;
+    var a = -10;
+    var b = 10;
+    var tolerance = 0.00005;	// error for adaptive quadrature
+    var recursionCount = 0;
+    var maxRecursionCount = 10000; // for now
+    var tooDeep = false;
+
+    function clearInputs() {
+      clearFields(["equation", "aValue", "bValue"]);
+    }
+
+    var currentAlgo = 4;   // 默认辛普森
+
+    // need：该算法依赖的输入项；hint：输入区上方的公式说明
+    var algoInfo = {
+      1: { need: "n", hint: "左矩形公式：把 [a, b] 分成 n 份，用每个小区间<b>左端点</b>的函数值近似，误差 O(h)。" },
+      2: { need: "n", hint: "右矩形公式：与左矩形相同，但取每个小区间的<b>右端点</b>，误差符号与左矩形相反。" },
+      3: { need: "n", hint: "梯形公式：h/2·[f(a) + 2Σf(xᵢ) + f(b)]，h = (b-a)/n，误差 O(h²)。" },
+      4: { need: "n", hint: "辛普森公式：每 2 小段用抛物线拟合，系数 1-4-1，实际把区间分成 2n 份，误差 O(h⁴)。" },
+      5: { need: "n", hint: "科特斯公式：每 4 小段用五点公式（系数 7-32-12-32-7，除以 22.5），误差 O(h⁶)。" },
+      6: { need: "tol", hint: "自适应辛普森：按误差判据自动二分区间，只需填写<b>精度 tol</b>，不使用分段数 n。" }
+    };
+
+    function selectAlgorithm(num) {
+      currentAlgo = num;
+      var info = algoInfo[num];
+
+      var tabs = document.querySelectorAll(".tab");
+      for (var i = 0; i < tabs.length; i++) {
+        var isActive = tabs[i].getAttribute("data-algo") == String(num);
+        tabs[i].className = isActive ? "tab active" : "tab";
+        tabs[i].setAttribute("aria-selected", isActive ? "true" : "false");
+      }
+
+      // 按算法切换输入项：矩形/梯形/辛普森/科特斯用 n，自适应用 precision
+      document.getElementById("nField").style.display = info.need === "n" ? "" : "none";
+      document.getElementById("tolField").style.display = info.need === "tol" ? "" : "none";
+      document.getElementById("algoHint").innerHTML = info.hint;
+
+      // 当前光标所在的输入框若被隐藏，退回函数输入框
+      var hiddenId = info.need === "n" ? "tolerance" : "nValue";
+      if (ElementId === hiddenId) ElementId = "equation";
+    }
+
+    function runIntegral() {
+      doIntegral(currentAlgo);
+    }
+
+    function useExample(equation, aa, bb, nn) {
+      document.getElementById("equation").value = equation;
+      document.getElementById("aValue").value = aa;
+      document.getElementById("bValue").value = bb;
+      document.getElementById("nValue").value = nn;
+
+      var tol = document.getElementById("tolerance");
+      if (tol.value === "") tol.value = "0.00005";
+
+      runIntegral();
+    }
+
+    function myParse(expression) {
+      theString = stripSpaces(expression);
+      with (Math) {
+        // now convert formatting from GC formatting
+        theString = replaceSubstring(theString, ")(", ")*(");
+        theString = replaceSubstring(theString, ")ln", ")*ln");
+        theString = replaceSubstring(theString, ")log", ")*log");
+        theString = replaceSubstring(theString, ")sin", ")*sin");
+        theString = replaceSubstring(theString, ")cos", ")*cos");
+        theString = replaceSubstring(theString, ")e", ")*e");
+
+        // 小键盘的 log10() 与 log 同义（以 10 为底），先归一化，
+        // 否则 putProduct 会把 log10( 当成 数字后接括号 而插入乘号
+        theString = replaceSubstring(theString, "log10", "log");
+
+        theString = putProduct(theString);
+        theString = replaceSubstring(theString, "log", "(1/log(10))*log");
+        theString = replaceSubstring(theString, "ln", "log");
+        theString = replaceChar(theString, "X", "x");
+      } // with Math
+      return (theString);
+    } // myParse
+
+    function replaceChar(InString, oldSymbol, newSymbol) {
+      OutString = "";
+      for (Count = 0; Count < InString.length; Count++) {
+        TempChar = InString.substring(Count, Count + 1);
+        if (TempChar != oldSymbol)
+          OutString = OutString + TempChar
+        else OutString = OutString + newSymbol;
+      }
+      return (OutString);
+    }
+
+    function replaceSubstring(InString, oldSubstring, newSubstring) {
+      OutString = "";
+      var sublength = oldSubstring.length;
+      for (Count = 0; Count < InString.length; Count++) {
+        TempStr = InString.substring(Count, Count + sublength);
+        TempChar = InString.substring(Count, Count + 1);
+        if (TempStr != oldSubstring)
+          OutString = OutString + TempChar
+        else {
+          OutString = OutString + newSubstring;
+          Count += sublength - 1
+        }
+
+      }
+      return (OutString);
+    }
+
+    function isNumberChar(InString) {
+      if (InString.length != 1)
+        return (false);
+      RefString = "1234567890)";
+      if (RefString.indexOf(InString, 0) == -1)
+        return (false);
+      return (true);
+    }
+
+    function isCharHere(InString, RefString) {
+      if (InString.length != 1)
+        return (false);
+      if (RefString.indexOf(InString, 0) == -1)
+        return (false);
+      return (true);
+    }
+
+    function putProduct(InString) {
+      OutString = "";
+      for (Count = 0; Count < InString.length; Count++) {
+        TempChar = InString.substring(Count, Count + 1);
+        if (!isCharHere(TempChar, "xXeslcapdDuU(") || (Count == 0)) { OutString = OutString + TempChar }
+        else {
+          if (isNumberChar(InString.substring(Count - 1, Count))) { OutString = OutString + "*" + TempChar }
+          else OutString = OutString + TempChar
+        }
+      }
+      return (OutString);
+    }
+
+    function calculateFunctionValue(xValue) {
+      var equation = myParse(document.getElementById("equation").value);
+
+      // 用 nerdamer 自身完成数值化，不再用 eval：
+      // nerdamer 的文本可能含 pi、e、^ 等 JS 无法直接求值的记号
+      var evaluated = nerdamer(substitute(equation, "x", "(" + xValue + ")")).evaluate();
+      return toNumber(evaluated);
+    }
+
+    function toNumber(evaluated) {
+      var value = Number(evaluated.text());
+      if (!isNaN(value)) return value;
+
+      // 结果为分数（如 1/3）时手动换算
+      var fraction = /^(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)$/.exec(evaluated.text());
+      if (fraction) return Number(fraction[1]) / Number(fraction[2]);
+
+      return NaN;
+    }
+
+    // 统一入口：捕获非法表达式等异常，避免结果区空白
+    function doIntegral() {
+      try {
+        return doIntegralCore.apply(null, arguments);
+      } catch (e) {
+        okToRoll = false;
+        document.getElementById("result").innerHTML = "计算失败：请检查函数表达式、积分区间与分段数是否有效。";
+      }
+    }
+
+    function doIntegralCore() {
+      document.getElementById("result").innerHTML = "";
+      with (Math) {
+        var n = 0; 	// number of subdivisions
+        okToRoll = true;
+        readBasics();
+        if (!okToRoll) return;
+        var num = doIntegralCore.arguments[0];
+
+        // Option 1,2,3 Left Sum, Right sum, Trap sum
+        if ((num == 1) || (num == 2) || (num == 3)) {
+          for (var k = 1; k <= 1; k++) {
+            var nn = document.getElementById("nValue").value;
+            if (nn == "") {
+              nn = "1";
+            }
+            var n = Number(nn);
+            if (isNaN(n)) { document.getElementById("result").innerHTML = "请输入积分区间分段数 n 的值"; okToRoll = false; break; }
+            if (n < 1) { document.getElementById("result").innerHTML = "n 至少大于等于 1!"; okToRoll = false; break; }
+            if (n > 100000) { document.getElementById("result").innerHTML = "呵呵，不好意思，大于100,000，本积分器做不了啊."; okToRoll = false; break; }
+          } // little loop
+
+          if (okToRoll) {
+            var deltax = (b - a) / n;
+            x = a;
+            var lsum = 0;
+            var rsum = 0;
+            y = calculateFunctionValue(x);
+            if (isNaN(y)) document.getElementById("result").innerHTML = "提醒：本次积分的结果不可信!"
+            for (var k = 1; k <= n; k++) {
+              lsum += y * deltax;
+              x = a + k * deltax;
+              y = calculateFunctionValue(x);
+              if (isNaN(y)) alert("提醒：本次积分的结果不可信!");
+              rsum += y * deltax;
+            }
+            if (num == 1) document.getElementById("result").innerHTML = (n == 1 ? "" : "复合") + "左矩形公式积分 = " + roundSigDig(lsum, 11);
+            else if (num == 2) document.getElementById("result").innerHTML = (n == 1 ? "" : "复合") + "右矩形公式积分 = " + roundSigDig(rsum, 11);
+            else if (num == 3) document.getElementById("result").innerHTML = (n == 1 ? "" : "复合") + "梯形法公式积分 = " + roundSigDig((lsum + rsum) / 2, 11);
+          }
+
+        } // Options 1, 2, 3
+
+        // Option 4 (Simpson)
+        else if (num == 4) {
+          for (var k = 1; k <= 1; k++) {
+            var nn = document.getElementById("nValue").value;
+            if (nn == "") {
+              nn = "1";
+            }
+            var n = Number(nn);
+            if (isNaN(n)) { document.getElementById("result").innerHTML = "请输入积分区间分段数 n 的值"; okToRoll = false; break; }
+            if (n < 1) { document.getElementById("result").innerHTML = "n 至少大于等于 1!"; okToRoll = false; break; }
+            if (n > 100000) { document.getElementById("result").innerHTML = "呵呵，不好意思，大于100,000，本积分器做不了啊."; okToRoll = false; break; }
+          } // little loop
+
+          if (okToRoll) {
+            var deltax = (b - a) / (2 * n);
+            x = a;
+            var sum = 0;
+            for (var k = 1; k <= 2 * n - 1; k += 2) {
+              y = calculateFunctionValue(x);
+              if (isNaN(y)) document.getElementById("result").innerHTML = "提醒：本次积分的结果不可信!"
+              sum += y * deltax;
+              x = a + k * deltax;
+              y = calculateFunctionValue(x);
+              if (isNaN(y)) document.getElementById("result").innerHTML = "提醒：本次积分的结果不可信!"
+              sum += 4 * y * deltax;
+              x = a + (k + 1) * deltax;
+              y = calculateFunctionValue(x);
+              if (isNaN(y)) alert("提醒：本次积分的结果不可信!");
+              sum += y * deltax;
+            }
+            sum = sum / 3;
+            document.getElementById("result").innerHTML = (n == 1 ? "" : "复合") + "辛普森积分 = " + roundSigDig(sum, 11);
+          } // okToRoll
+        }
+
+        // Option 5
+        else if (num == 5) {
+          for (var k = 1; k <= 1; k++) {
+            var nn = document.getElementById("nValue").value;
+            if (nn == "") {
+              nn = "1";
+            }
+            var n = Number(nn);
+            if (isNaN(n)) { document.getElementById("result").innerHTML = "请输入积分区间分段数 n 的值"; okToRoll = false; break; }
+            if (n < 1) { document.getElementById("result").innerHTML = "n 至少大于等于 1!"; okToRoll = false; break; }
+            if (n > 100000) { document.getElementById("result").innerHTML = "呵呵，不好意思，大于100,000，本积分器做不了啊."; okToRoll = false; break; }
+          } // little loop
+
+          if (okToRoll) {
+            var deltax = (b - a) / (4 * n);
+            x = a;
+            var sum = 0;
+            for (var k = 1; k <= 4 * n - 3; k += 4) {
+              y = calculateFunctionValue(x);
+              if (isNaN(y)) document.getElementById("result").innerHTML = "提醒：本次积分的结果不可信!"
+              sum += 7 * y * deltax;
+              x = a + k * deltax;
+              y = calculateFunctionValue(x);
+              if (isNaN(y)) document.getElementById("result").innerHTML = "提醒：本次积分的结果不可信!"
+              sum += 32 * y * deltax;
+              x = a + (k + 1) * deltax;
+              y = calculateFunctionValue(x);
+              if (isNaN(y)) document.getElementById("result").innerHTML = "提醒：本次积分的结果不可信!"
+              sum += 12 * y * deltax;
+              x = a + (k + 2) * deltax;
+              y = calculateFunctionValue(x);
+              if (isNaN(y)) document.getElementById("result").innerHTML = "提醒：本次积分的结果不可信!"
+              sum += 32 * y * deltax;
+              x = a + (k + 3) * deltax;
+              y = calculateFunctionValue(x);
+              if (isNaN(y)) alert("提醒：本次积分的结果不可信!");
+              sum += 7 * y * deltax;
+            }
+            sum = sum / 22.5;
+            document.getElementById("result").innerHTML = (n == 1 ? "" : "复合") + "科特斯积分 = " + roundSigDig(sum, 11);
+          } // okToRoll
+        }
+
+        // Option 6 Adaptive Quadrature
+        else if ((num == 6) && (okToRoll)) {
+          for (var k = 1; k <= 1; k++) {
+            var tolstr = document.getElementById("tolerance").value;
+            if ((tolstr == "") || (isNaN(tolstr))) { document.getElementById("result").innerHTML = "请输入误差值."; okToRoll = false; break; }
+            tolerance = Number(tolstr);
+            if (isNaN(tolerance)) { document.getElementById("result").innerHTML = "请输入误差值."; okToRoll = false; break; }
+            if (tolerance <= 0) { document.getElementById("result").innerHTML = "误差必须是正值!"; okToRoll = false; break; }
+            if (tolerance <= 0.000000000005) { document.getElementById("result").innerHTML = "超出最大可能的精度..."; okToRoll = false; break; }
+          } // little loop
+
+          // 精度校验未通过时直接返回，避免错误提示被后续计算覆盖
+          if (!okToRoll) return;
+
+          var sum = AdaptiveQuadrature();
+          document.getElementById("result").innerHTML = "自适应辛普森数值积分 = " + roundSigDig(sum, 11) + " +/- " + tolerance;
+
+        }
+
+      } // with Math		
+    } // do Integral
+
+    function S(aa, bb) {
+      // part of adaptive quadrature
+      with (Math) {
+        var m = (bb + aa) / 2;
+        var fa = calculateFunctionValue(aa);
+        var fb = calculateFunctionValue(bb);
+        var fm = calculateFunctionValue(m);
+        return (bb - aa) * (fa + 4 * fm + fb) / 6;
+      }
+
+    } // function S
+
+    function approx(c, d, delta) {
+
+      var sum = 0;
+      var m = (c + d) / 2;
+      var error1 = Math.abs(S(c, d) - S(c, m) - S(m, d)) * (b - a) / (15 * (d - c));
+      if (error1 <= delta) sum = S(c, m) + S(m, d);
+      else {
+
+        if (recursionCount >= maxRecursionCount) {
+          tooDeep = true;
+          sum = S(c, m) + S(m, d);
+        } // if stack depth exceeded
+        else {
+          sum = approx(c, m, delta / 2) + approx(m, d, delta / 2);
+          recursionCount += 1
+        }
+      }
+
+      return (sum);	// returns S(a,b) if small enough, else the sum of smaller pieces if not
+
+    } // approx
+
+    function AdaptiveQuadrature() {
+      recursionCount = 0;
+      tooDeep = false;
+      var qq = (b - a) / 2;
+
+      var theValue = approx(a, a + qq, tolerance / 2) + approx(a + qq, b, tolerance / 2);
+      if (tooDeep) alert("超出 " + maxRecursionCount + " 分段数. 结果不可信，建议再细分积分区间.")
+      return theValue;
+    } // AdaptiveQuadrature
+
+    function readBasics() {
+
+      for (var k = 1; k <= 1; k++) {
+        var theFunction = stripSpaces(document.getElementById("equation").value);
+        if (theFunction == "") { document.getElementById("result").innerHTML = "请输入函数."; okToRoll = false; break; }
+        var aa = document.getElementById("aValue").value;
+        if (aa == "") { document.getElementById("result").innerHTML = "请输入左端点的值."; okToRoll = false; break; }
+        a = Number(aa);
+        if (isNaN(a)) { document.getElementById("result").innerHTML = "请输入左端点的值."; okToRoll = false; break; }
+        var bb = document.getElementById("bValue").value;
+        if (bb == "") { document.getElementById("result").innerHTML = "请输入右端点的值."; okToRoll = false; break }
+        b = Number(bb);
+        if (isNaN(b)) { document.getElementById("result").innerHTML = "请输入右端点的值."; okToRoll = false; break; }
+      } // end of single loop
+    }
+
+    function shiftRight(theNumber, k) {
+      if (k == 0) return (theNumber)
+      else {
+        var k2 = 1;
+        var num = k;
+        if (num < 0) num = -num;
+        for (var i = 1; i <= num; i++) {
+          k2 = k2 * 10
+        }
+      }
+      if (k > 0) { return (k2 * theNumber) }
+      else { return (theNumber / k2) }
+    }
+
+    function roundSigDig(theNumber, numDigits) {
+      with (Math) {
+        if (theNumber == 0) return (0);
+        else if (abs(theNumber) < 0.000000000001) return (0);
+        // WARNING: ignores numbers less than 10^(-12)
+        else {
+          var k = floor(log(abs(theNumber)) / log(10)) - numDigits
+          var k2 = shiftRight(round(shiftRight(abs(theNumber), -k)), k)
+          if (theNumber > 0) return (k2);
+          else return (-k2)
+        } // end else
+      }
+    }
+
+    function stripSpaces(InString) {
+      var OutString = "";
+      for (Count = 0; Count < InString.length; Count++) {
+        var TempChar = InString.substring(Count, Count + 1);
+        if (TempChar != " ")
+          OutString = OutString + TempChar;
+      }
+      return (OutString);
+    }
+
+    function substitute(expression, variable, value) {
+      return expression.replace(new RegExp(variable, "g"), value);
+    }
+
+    // 初始化：按默认算法（辛普森）显示对应的输入项与说明
+    selectAlgorithm(currentAlgo);
+  </script>
+</body>
+
+</html>

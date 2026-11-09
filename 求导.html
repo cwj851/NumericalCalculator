@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>求导 · 数值计算器</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body class="theme-diff">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="back-btn" href="index.html">← 首页</a>
+      <div class="titles">
+        <h1>求导</h1>
+        <p>对函数关于 x 求一阶导数</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <div class="workspace">
+
+      <section class="card">
+        <h2 class="card-title">输入函数</h2>
+
+        <label class="field">
+          <span>函数 f(x)</span>
+          <input type="text" id="equation" placeholder="例如 x^3+2x、sin(x)、ln(x)" data-enter="differentiateFunction" />
+        </label>
+
+        <div class="actions">
+          <button type="button" class="btn btn-primary" onclick="differentiateFunction()">求 导</button>
+          <button type="button" class="btn btn-ghost" onclick="copyResult('solution')">复制结果</button>
+          <button type="button" class="btn btn-ghost" onclick="clearInputs()">清 除</button>
+        </div>
+
+        <p id="solution" class="result" data-empty="结果将显示在这里"></p>
+
+        <div class="examples">
+          <p>试试这些例子</p>
+          <div class="example-row">
+            <button type="button" class="example" onclick="useExample('x^3+2x')">x³+2x</button>
+            <button type="button" class="example" onclick="useExample('sin(x)*ln(x)')">sin(x)·ln(x)</button>
+            <button type="button" class="example" onclick="useExample('1/(1+x^2)')">1/(1+x²)</button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="card side">
+        <h2 class="card-title">输入面板</h2>
+        <p class="card-note">符号插入到光标所在位置，函数写完整括号后会自动把光标停在括号内。</p>
+
+        <div class="chips">
+          <button type="button" class="chip chip-key" onclick="insertSymbol('x')">x</button>
+          <button type="button" class="chip" onclick="insertSymbol('^')">x<sup>y</sup></button>
+          <button type="button" class="chip" onclick="insertSymbol('(')">(</button>
+          <button type="button" class="chip" onclick="insertSymbol(')')">)</button>
+          <button type="button" class="chip" onclick="insertSymbol('sqrt()')">√</button>
+          <button type="button" class="chip" onclick="insertSymbol('pi')">π</button>
+          <button type="button" class="chip" onclick="insertSymbol('e')">e</button>
+          <button type="button" class="chip" onclick="insertSymbol('sin()')">sin</button>
+          <button type="button" class="chip" onclick="insertSymbol('cos()')">cos</button>
+          <button type="button" class="chip" onclick="insertSymbol('tan()')">tan</button>
+          <button type="button" class="chip" onclick="insertSymbol('ln()')">ln</button>
+          <button type="button" class="chip" onclick="insertSymbol('log10()')">log</button>
+        </div>
+
+        <div class="keypad">
+          <button type="button" class="key" onclick="insertSymbol('7')">7</button>
+          <button type="button" class="key" onclick="insertSymbol('8')">8</button>
+          <button type="button" class="key" onclick="insertSymbol('9')">9</button>
+          <button type="button" class="key op" onclick="insertSymbol('/')">÷</button>
+
+          <button type="button" class="key" onclick="insertSymbol('4')">4</button>
+          <button type="button" class="key" onclick="insertSymbol('5')">5</button>
+          <button type="button" class="key" onclick="insertSymbol('6')">6</button>
+          <button type="button" class="key op" onclick="insertSymbol('*')">×</button>
+
+          <button type="button" class="key" onclick="insertSymbol('1')">1</button>
+          <button type="button" class="key" onclick="insertSymbol('2')">2</button>
+          <button type="button" class="key" onclick="insertSymbol('3')">3</button>
+          <button type="button" class="key op" onclick="insertSymbol('-')">−</button>
+
+          <button type="button" class="key" onclick="insertSymbol('0')">0</button>
+          <button type="button" class="key" onclick="insertSymbol('.')">.</button>
+          <button type="button" class="key back" onclick="backspace()">⌫</button>
+          <button type="button" class="key op" onclick="insertSymbol('+')">+</button>
+        </div>
+      </aside>
+
+    </div>
+  </main>
+
+  <div id="toast" class="toast">已复制</div>
+
+  <script src="js/nerdamer.core.js"></script>
+  <script src="js/Algebra.js"></script>
+  <script src="js/Calculus.js"></script>
+  <script src="js/Solve.js"></script>
+  <script src="js/ui.js"></script>
+
+  <script>
+    function clearInputs() {
+      clearFields(["equation"]);
+    }
+
+    function useExample(equation) {
+      document.getElementById('equation').value = equation;
+      differentiateFunction();
+    }
+
+    function differentiateFunction() {
+      var equation = document.getElementById('equation').value.trim();
+      var solutionEl = document.getElementById('solution');
+
+      if (equation === '') { solutionEl.innerHTML = '请输入函数.'; return; }
+
+      try {
+        var derivative = nerdamer.diff(equation, 'x').toString();
+
+        var solutionText = '对函数  ' + equation + '  求导得:<br>';
+        solutionText += derivative;
+
+        solutionEl.innerHTML = solutionText;
+      } catch (e) {
+        solutionEl.innerHTML = '求导失败：请检查函数写法（自变量用 x 表示）.';
+      }
+    }
+  </script>
+</body>
+
+</html>

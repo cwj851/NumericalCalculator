@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>函数值 · 数值计算器</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body class="theme-eval">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="back-btn" href="index.html">← 首页</a>
+      <div class="titles">
+        <h1>函数值</h1>
+        <p>代入 x 的取值，求 f(x) 的数值结果</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <div class="workspace">
+
+      <section class="card">
+        <h2 class="card-title">输入</h2>
+
+        <label class="field">
+          <span>函数 f(x)</span>
+          <input type="text" id="equation" placeholder="例如 x^2+2x+1、sin(x)、ln(x)" data-enter="calculateFunctionValue" />
+        </label>
+
+        <label class="field">
+          <span>x 的取值</span>
+          <input type="text" id="xValue" placeholder="例如 2、-1.5、pi/2" data-enter="calculateFunctionValue" />
+        </label>
+
+        <div class="actions">
+          <button type="button" class="btn btn-primary" onclick="calculateFunctionValue()">计 算</button>
+          <button type="button" class="btn btn-ghost" onclick="copyResult('result')">复制结果</button>
+          <button type="button" class="btn btn-ghost" onclick="clearInputs()">清 除</button>
+        </div>
+
+        <p id="result" class="result" data-empty="结果将显示在这里"></p>
+
+        <div class="examples">
+          <p>试试这些例子</p>
+          <div class="example-row">
+            <button type="button" class="example" onclick="useExample('x^2+2x+1', '2')">x²+2x+1，x=2</button>
+            <button type="button" class="example" onclick="useExample('sin(x)', 'pi/2')">sin(x)，x=π/2</button>
+            <button type="button" class="example" onclick="useExample('ln(x)+sqrt(x)', '4')">ln x+√x，x=4</button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="card side">
+        <h2 class="card-title">输入面板</h2>
+        <p class="card-note">符号会插入到光标所在位置，可先点选上方输入框再按键。</p>
+
+        <div class="chips">
+          <button type="button" class="chip chip-key" onclick="insertSymbol('x')">x</button>
+          <button type="button" class="chip" onclick="insertSymbol('^')">x<sup>y</sup></button>
+          <button type="button" class="chip" onclick="insertSymbol('(')">(</button>
+          <button type="button" class="chip" onclick="insertSymbol(')')">)</button>
+          <button type="button" class="chip" onclick="insertSymbol('sqrt()')">√</button>
+          <button type="button" class="chip" onclick="insertSymbol('pi')">π</button>
+          <button type="button" class="chip" onclick="insertSymbol('e')">e</button>
+          <button type="button" class="chip" onclick="insertSymbol('sin()')">sin</button>
+          <button type="button" class="chip" onclick="insertSymbol('cos()')">cos</button>
+          <button type="button" class="chip" onclick="insertSymbol('tan()')">tan</button>
+          <button type="button" class="chip" onclick="insertSymbol('ln()')">ln</button>
+          <button type="button" class="chip" onclick="insertSymbol('log10()')">log</button>
+        </div>
+
+        <div class="keypad">
+          <button type="button" class="key" onclick="insertSymbol('7')">7</button>
+          <button type="button" class="key" onclick="insertSymbol('8')">8</button>
+          <button type="button" class="key" onclick="insertSymbol('9')">9</button>
+          <button type="button" class="key op" onclick="insertSymbol('/')">÷</button>
+
+          <button type="button" class="key" onclick="insertSymbol('4')">4</button>
+          <button type="button" class="key" onclick="insertSymbol('5')">5</button>
+          <button type="button" class="key" onclick="insertSymbol('6')">6</button>
+          <button type="button" class="key op" onclick="insertSymbol('*')">×</button>
+
+          <button type="button" class="key" onclick="insertSymbol('1')">1</button>
+          <button type="button" class="key" onclick="insertSymbol('2')">2</button>
+          <button type="button" class="key" onclick="insertSymbol('3')">3</button>
+          <button type="button" class="key op" onclick="insertSymbol('-')">−</button>
+
+          <button type="button" class="key" onclick="insertSymbol('0')">0</button>
+          <button type="button" class="key" onclick="insertSymbol('.')">.</button>
+          <button type="button" class="key back" onclick="backspace()">⌫</button>
+          <button type="button" class="key op" onclick="insertSymbol('+')">+</button>
+        </div>
+      </aside>
+
+    </div>
+  </main>
+
+  <div id="toast" class="toast">已复制</div>
+
+  <script src="js/nerdamer.core.js"></script>
+  <script src="js/Algebra.js"></script>
+  <script src="js/Calculus.js"></script>
+  <script src="js/Solve.js"></script>
+  <script src="js/ui.js"></script>
+
+  <script>
+    function clearInputs() {
+      clearFields(["equation", "xValue"]);
+    }
+
+    function myParse(expression) {
+      theString = stripSpaces(expression);
+      with (Math) {
+        // now convert formatting from GC formatting
+        theString = replaceSubstring(theString, ")(", ")*(");
+        theString = replaceSubstring(theString, ")ln", ")*ln");
+        theString = replaceSubstring(theString, ")log", ")*log");
+        theString = replaceSubstring(theString, ")sin", ")*sin");
+        theString = replaceSubstring(theString, ")cos", ")*cos");
+        theString = replaceSubstring(theString, ")e", ")*e");
+
+        // 小键盘的 log10() 与 log 同义（以 10 为底），先归一化，
+        // 否则 putProduct 会把 log10( 当成 数字后接括号 而插入乘号
+        theString = replaceSubstring(theString, "log10", "log");
+
+        theString = putProduct(theString);
+        theString = replaceSubstring(theString, "log", "(1/log(10))*log");
+        theString = replaceSubstring(theString, "ln", "log");
+        theString = replaceChar(theString, "X", "x");
+      } // with Math
+      return (theString);
+    } // myParse
+
+    function replaceChar(InString, oldSymbol, newSymbol) {
+      OutString = "";
+      for (Count = 0; Count < InString.length; Count++) {
+        TempChar = InString.substring(Count, Count + 1);
+        if (TempChar != oldSymbol)
+          OutString = OutString + TempChar
+        else OutString = OutString + newSymbol;
+      }
+      return (OutString);
+    }
+
+    function replaceSubstring(InString, oldSubstring, newSubstring) {
+      OutString = "";
+      var sublength = oldSubstring.length;
+      for (Count = 0; Count < InString.length; Count++) {
+        TempStr = InString.substring(Count, Count + sublength);
+        TempChar = InString.substring(Count, Count + 1);
+        if (TempStr != oldSubstring)
+          OutString = OutString + TempChar
+        else {
+          OutString = OutString + newSubstring;
+          Count += sublength - 1
+        }
+
+      }
+      return (OutString);
+    }
+
+    function isNumberChar(InString) {
+      if (InString.length != 1)
+        return (false);
+      RefString = "1234567890)";
+      if (RefString.indexOf(InString, 0) == -1)
+        return (false);
+      return (true);
+    }
+
+    function isCharHere(InString, RefString) {
+      if (InString.length != 1)
+        return (false);
+      if (RefString.indexOf(InString, 0) == -1)
+        return (false);
+      return (true);
+    }
+
+    function putProduct(InString) {
+      OutString = "";
+      for (Count = 0; Count < InString.length; Count++) {
+        TempChar = InString.substring(Count, Count + 1);
+        if (!isCharHere(TempChar, "xXeslcapdDuU(") || (Count == 0)) { OutString = OutString + TempChar }
+        else {
+          if (isNumberChar(InString.substring(Count - 1, Count))) { OutString = OutString + "*" + TempChar }
+          else OutString = OutString + TempChar
+        }
+      }
+      return (OutString);
+    }
+
+    function stripSpaces(InString) {
+      var OutString = "";
+      for (Count = 0; Count < InString.length; Count++) {
+        var TempChar = InString.substring(Count, Count + 1);
+        if (TempChar != " ")
+          OutString = OutString + TempChar;
+      }
+      return (OutString);
+    }
+
+    function useExample(equation, xValue) {
+      document.getElementById("equation").value = equation;
+      document.getElementById("xValue").value = xValue;
+      calculateFunctionValue();
+    }
+
+    function calculateFunctionValue() {
+      var equationText = document.getElementById("equation").value;
+      var xValue = document.getElementById("xValue").value;
+      var resultEl = document.getElementById("result");
+
+      if (stripSpaces(equationText) === "") { resultEl.innerHTML = "请输入函数."; return; }
+      if (stripSpaces(xValue) === "") { resultEl.innerHTML = "请输入 x 的值."; return; }
+
+      try {
+        var equation = myParse(equationText);
+        // 用括号包裹代入值，避免 x 为负数时 "x^2" 被解析成 "-2^2"
+        var value = nerdamer(substitute(equation, "x", "(" + xValue + ")"))
+          .evaluate()
+          .text();
+        resultEl.innerHTML = "函数的值为：" + value;
+      } catch (e) {
+        resultEl.innerHTML = "无法计算：请检查函数与 x 值的写法.";
+      }
+    }
+
+    function substitute(expression, variable, value) {
+      return expression.replace(new RegExp(variable, "g"), value);
+    }
+  </script>
+</body>
+
+</html>
