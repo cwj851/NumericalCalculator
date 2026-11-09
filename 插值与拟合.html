@@ -36,6 +36,8 @@
             <span class="point-count" id="pointCount">共 4 个点</span>
           </div>
 
+          <p class="card-note">数值可以填表达式：√2 写成 sqrt(2)，还有 ln(3)、pi/2、2^0.5 等。</p>
+
           <div class="points-head">
             <span>#</span>
             <span>xᵢ</span>
@@ -60,8 +62,8 @@
           </div>
 
           <label class="field">
-            <span>求值点 x（可选，多个用逗号分隔）</span>
-            <input type="text" id="evalPoints" inputmode="decimal" placeholder="例如 1.5, 2.5" data-enter="computeInterp" />
+            <span>求值点 x（可选，多个用逗号分隔，支持表达式）</span>
+            <input type="text" id="evalPoints" inputmode="text" placeholder="例如 1.5, pi/2, sqrt(2)" data-enter="computeInterp" />
           </label>
 
           <p class="algo-hint" id="methodHint"></p>
@@ -77,6 +79,7 @@
               <button type="button" class="example" onclick="usePreset('square')">y = x²（4 点）</button>
               <button type="button" class="example" onclick="usePreset('sin')">sin x（5 点）</button>
               <button type="button" class="example" onclick="usePreset('line')">近似直线（5 点）</button>
+              <button type="button" class="example" onclick="usePreset('pi')">π 分点（4 点）</button>
             </div>
           </div>
         </section>
@@ -111,12 +114,22 @@
 
       <aside class="card side">
         <h2 class="card-title">输入面板</h2>
-        <p class="card-note">数字插入到光标所在的输入框，用于填写 xᵢ、yᵢ 与求值点。</p>
+        <p class="card-note">插入到光标所在的输入框，可写 sqrt(2)、ln(3)、pi/2 这类表达式。</p>
 
         <div class="chips">
-          <button type="button" class="chip" onclick="insertSymbol(',')">,</button>
-          <button type="button" class="chip" onclick="insertSymbol('-')">−</button>
-          <button type="button" class="chip" onclick="insertSymbol('.')">.</button>
+          <button type="button" class="chip" onclick="insertSymbol('^')">x<sup>y</sup></button>
+          <button type="button" class="chip" onclick="insertSymbol('(')">(</button>
+          <button type="button" class="chip" onclick="insertSymbol(')')">)</button>
+          <button type="button" class="chip" onclick="insertSymbol('sqrt()')">√</button>
+          <button type="button" class="chip" onclick="insertSymbol('pi')">π</button>
+          <button type="button" class="chip" onclick="insertSymbol('e')">e</button>
+          <button type="button" class="chip" onclick="insertSymbol('sin()')">sin</button>
+          <button type="button" class="chip" onclick="insertSymbol('cos()')">cos</button>
+          <button type="button" class="chip" onclick="insertSymbol('tan()')">tan</button>
+          <button type="button" class="chip" onclick="insertSymbol('ln()')">ln</button>
+          <button type="button" class="chip" onclick="insertSymbol('log()')">log</button>
+          <button type="button" class="chip chip-key" onclick="insertSymbol(',')">,</button>
+          <button type="button" class="chip chip-key" onclick="insertSymbol('-')">−</button>
         </div>
 
         <div class="keypad">
@@ -200,6 +213,193 @@
 
     function escapeText(text) {
       return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    /* ==========================================================
+       常数值表达式：支持 + − × ÷ ^、括号、sqrt/ln/log/三角、
+       常量 pi / e，以及 √2、π/2、2pi、3(1+2) 这类写法
+       ========================================================== */
+
+    var CONST_FUNCS = {
+      sin: Math.sin, cos: Math.cos, tan: Math.tan,
+      asin: Math.asin, acos: Math.acos, atan: Math.atan,
+      sinh: Math.sinh, cosh: Math.cosh, tanh: Math.tanh,
+      ln: Math.log, log: Math.log10, log10: Math.log10, log2: Math.log2,
+      exp: Math.exp, sqrt: Math.sqrt, abs: Math.abs, cbrt: Math.cbrt
+    };
+
+    /* 统一各种写法：全角逗号、×÷−、π、√、²³ 等 */
+    function normalizeExpr(text) {
+      var s = stripSpaces(String(text));
+      return s.replace(/，/g, ",")
+        .replace(/[×·]/g, "*")
+        .replace(/÷/g, "/")
+        .replace(/[−–—]/g, "-")
+        .replace(/π/g, "pi")
+        .replace(/√/g, "sqrt")
+        .replace(/²/g, "^2")
+        .replace(/³/g, "^3");
+    }
+
+    function tokenizeExpr(src) {
+      var tokens = [], i = 0;
+
+      while (i < src.length) {
+        var rest = src.substring(i);
+        var ch = src.charAt(i);
+
+        if (ch === " ") { i++; continue; }
+
+        var numMatch = /^(\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/.exec(rest);
+        if (numMatch) {
+          var numValue = Number(numMatch[0]);
+          if (!isFinite(numValue)) throw new Error("数字写法不对：" + numMatch[0]);
+          tokens.push({ type: "num", value: numValue, text: numMatch[0] });
+          i += numMatch[0].length;
+          continue;
+        }
+
+        var nameMatch = /^[a-zA-Z]+/.exec(rest);
+        if (nameMatch) {
+          var name = nameMatch[0].toLowerCase();
+          var nameLen = nameMatch[0].length;
+
+          // log10 / log2 这类带数字的函数名单独认出来，其它情况数字算隐式乘号（√2 → sqrt*2）
+          var tail = /^\d+/.exec(rest.substring(nameLen));
+          if (tail && CONST_FUNCS[name + tail[0]]) {
+            name += tail[0];
+            nameLen += tail[0].length;
+          }
+
+          tokens.push({ type: "name", text: name });
+          i += nameLen;
+          continue;
+        }
+
+        if ("+-*/^(),".indexOf(ch) >= 0) {
+          tokens.push({ type: ch });
+          i++;
+          continue;
+        }
+
+        throw new Error("不认识的符号「" + ch + "」");
+      }
+
+      return tokens;
+    }
+
+    function evalConstantExpr(text) {
+      var tokens = tokenizeExpr(text);
+      if (!tokens.length) throw new Error("没有内容");
+
+      var at = 0;
+
+      function peek() { return tokens[at] || null; }
+      function take() { return tokens[at++] || null; }
+
+      function startsValue(t) {
+        return !!t && (t.type === "num" || t.type === "name" || t.type === "(");
+      }
+
+      function parseExpr() {
+        var value = parseTerm();
+        while (true) {
+          var t = peek();
+          if (!t || (t.type !== "+" && t.type !== "-")) break;
+          take();
+          var rhs = parseTerm();
+          value = t.type === "+" ? value + rhs : value - rhs;
+        }
+        return value;
+      }
+
+      function parseTerm() {
+        var value = parseUnary();
+        while (true) {
+          var t = peek();
+          if (t && (t.type === "*" || t.type === "/")) {
+            take();
+            var rhs = parseUnary();
+            value = t.type === "*" ? value * rhs : value / rhs;
+          } else if (startsValue(t)) {
+            value = value * parseUnary();   // 隐式乘号：2pi、3(1+2)
+          } else {
+            break;
+          }
+        }
+        return value;
+      }
+
+      function parseUnary() {
+        var t = peek();
+        if (t && (t.type === "+" || t.type === "-")) {
+          take();
+          var v = parseUnary();
+          return t.type === "-" ? -v : v;
+        }
+        return parsePower();
+      }
+
+      function parsePower() {
+        var base = parseAtom();
+        var t = peek();
+        if (t && t.type === "^") {
+          take();
+          return Math.pow(base, parseUnary());
+        }
+        return base;
+      }
+
+      function parseAtom() {
+        var t = take();
+        if (!t) throw new Error("表达式不完整");
+
+        if (t.type === "num") return t.value;
+
+        if (t.type === "(") {
+          var inner = parseExpr();
+          var close = take();
+          if (!close || close.type !== ")") throw new Error("括号没有配对");
+          return inner;
+        }
+
+        if (t.type === "name") {
+          if (t.text === "pi") return Math.PI;
+          if (t.text === "e") return Math.E;
+
+          var fn = CONST_FUNCS[t.text];
+          if (!fn) throw new Error("不认识的函数或常量「" + t.text + "」");
+
+          var open = peek();
+          if (open && open.type === "(") {
+            take();
+            var arg = parseExpr();
+            var closeParen = take();
+            if (!closeParen || closeParen.type !== ")") throw new Error("括号没有配对");
+            return fn(arg);
+          }
+
+          return fn(parsePower());   // 允许 √2 这种不带括号的写法
+        }
+
+        throw new Error("表达式里有无法识别的内容");
+      }
+
+      var result = parseExpr();
+      if (at < tokens.length) throw new Error("表达式有多余的内容");
+      if (!isFinite(result)) throw new Error("计算结果不是有限数");
+      return result;
+    }
+
+    /* 读取一个数值框：空值返回 empty，非法表达式返回 error */
+    function parseCellValue(text) {
+      var raw = normalizeExpr(text);
+      if (raw === "") return { empty: true };
+      try {
+        return { value: evalConstantExpr(raw) };
+      } catch (e) {
+        return { error: e.message };
+      }
     }
 
     var SUP = { "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹" };
@@ -478,6 +678,12 @@
           { x: "2", y: "5.2" },
           { x: "3", y: "6.8" },
           { x: "4", y: "9.1" }
+        ],
+        pi: [
+          { x: "0", y: "0" },
+          { x: "pi/4", y: "0.7071" },
+          { x: "pi/2", y: "1" },
+          { x: "3pi/4", y: "0.7071" }
         ]
       };
 
@@ -544,20 +750,20 @@
           return { error: "第 " + (i + 1) + " 个数据点的 x 或 y 没有填写完整。" };
         }
 
-        var x = Number(xText), y = Number(yText);
-        if (!isFinite(x) || !isFinite(y)) {
-          return { error: "第 " + (i + 1) + " 个数据点的 x 或 y 不是有效数字。" };
-        }
-        xs.push(x);
-        ys.push(y);
+        var xr = parseCellValue(xText);
+        var yr = parseCellValue(yText);
+        if (xr.error) return { error: "第 " + (i + 1) + " 个点的 x 算不出来：" + xr.error };
+        if (yr.error) return { error: "第 " + (i + 1) + " 个点的 y 算不出来：" + yr.error };
+
+        xs.push(xr.value);
+        ys.push(yr.value);
       }
 
       return { xs: xs, ys: ys };
     }
 
     function parseEvalPoints() {
-      var text = stripSpaces(document.getElementById("evalPoints").value);
-      text = text.replace(/，/g, ",");
+      var text = normalizeExpr(document.getElementById("evalPoints").value);
       if (text === "") return { list: [] };
 
       var parts = text.split(",");
@@ -565,9 +771,9 @@
 
       for (var i = 0; i < parts.length; i++) {
         if (parts[i] === "") continue;
-        var v = Number(parts[i]);
-        if (!isFinite(v)) return { error: "求值点里有无法识别的数字：" + parts[i] };
-        list.push(v);
+        var parsed = parseCellValue(parts[i]);
+        if (parsed.error) return { error: "求值点「" + parts[i] + "」算不出来：" + parsed.error };
+        list.push(parsed.value);
       }
 
       if (list.length > 30) return { error: "求值点最多 30 个。" };
@@ -1043,12 +1249,10 @@
     function livePairs() {
       var rows = pointRows(), list = [];
       for (var i = 0; i < rows.length; i++) {
-        var xText = stripSpaces(rows[i].querySelector("input.x").value);
-        var yText = stripSpaces(rows[i].querySelector("input.y").value);
-        if (xText === "" || yText === "") continue;
-
-        var x = Number(xText), y = Number(yText);
-        if (isFinite(x) && isFinite(y)) list.push({ x: x, y: y });
+        var xr = parseCellValue(rows[i].querySelector("input.x").value);
+        var yr = parseCellValue(rows[i].querySelector("input.y").value);
+        if (xr.empty || yr.empty || xr.error || yr.error) continue;
+        list.push({ x: xr.value, y: yr.value });
       }
       return list;
     }
