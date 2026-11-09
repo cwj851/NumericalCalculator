@@ -100,6 +100,7 @@
   <script src="js/Calculus.js"></script>
   <script src="js/Solve.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/history.js"></script>
 
   <script>
     function clearInputs() {
@@ -124,6 +125,7 @@
         solutionText += derivative;
 
         solutionEl.innerHTML = solutionText;
+        NCHistory.record();
       } catch (e) {
         solutionEl.innerHTML = '求导失败：请检查函数写法（自变量用 x 表示）.';
       }

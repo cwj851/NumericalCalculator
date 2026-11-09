@@ -168,6 +168,7 @@
 
   <script src="js/expr.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/history.js"></script>
 
   <script>
     /* ==========================================================
@@ -581,6 +582,7 @@
       renderResult(out, tol, maxIter);
       renderSteps(out, tol, maxIter);
       renderChart(out, tol);
+      NCHistory.record();
     }
 
     /* ---------- 算法 ---------- */

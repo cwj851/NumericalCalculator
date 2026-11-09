@@ -125,6 +125,7 @@
   <script src="js/Calculus.js"></script>
   <script src="js/Solve.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/history.js"></script>
 
   <script>
     function clearInputs() {
@@ -245,6 +246,7 @@
           .text();
         resultEl.innerHTML = "函数的值为：" + value;
         renderChart(equation, equationText, xValue, value);
+        NCHistory.record();
       } catch (e) {
         resultEl.innerHTML = "无法计算：请检查函数与 x 值的写法.";
         clearChart("表达式无法计算，暂时无法绘制图像。");

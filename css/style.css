@@ -198,6 +198,219 @@ body::before {
   color: var(--muted);
 }
 
+/* ---------- 历史记录 ---------- */
+.history-toggle {
+  margin-left: auto;
+  padding: 7px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.history-toggle-floating {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top));
+  right: 14px;
+  z-index: 30;
+}
+
+/* 顶栏放按钮后，标题区允许收缩，副标题单行省略，避免顶栏被挤高 */
+.topbar-inner .titles { min-width: 0; }
+
+.topbar-inner .titles p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  color: var(--accent-ink);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.history-count:empty { display: none; }
+
+body.history-open { overflow: hidden; }
+
+.history-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: none;
+}
+
+.history-drawer.open { display: block; }
+
+.history-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 20, 40, 0.42);
+  animation: history-fade 0.18s ease;
+}
+
+.history-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(420px, 92vw);
+  height: 100%;
+  padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+  background: #fff;
+  box-shadow: -20px 0 44px -26px rgba(23, 28, 52, 0.9);
+  animation: history-slide 0.22s ease;
+}
+
+.history-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.history-panel-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--accent-ink);
+}
+
+.history-panel-ops { display: flex; align-items: center; gap: 6px; }
+
+.history-panel-btn {
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--muted);
+  background: #f4f6fb;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.history-panel-btn:hover { color: var(--accent-ink); background: var(--accent-soft); }
+
+.history-panel-close {
+  padding: 6px 10px;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.history-note { margin: 0 0 12px; }
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+
+@keyframes history-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes history-slide {
+  from { transform: translateX(24px); opacity: 0.5; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.history-empty {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.history-item {
+  padding: 11px 13px;
+  background: #fbfcff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.history-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.history-time {
+  flex: 0 0 auto;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.history-result {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--accent-ink);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-summary {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.history-ops {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.history-btn {
+  padding: 5px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.history-btn:hover { transform: translateY(-1px); }
+.history-btn:active { transform: translateY(0); }
+
+.history-btn-ghost {
+  color: var(--muted);
+  background: #fff;
+  border-color: var(--line);
+}
+
+@media (max-width: 480px) {
+  .history-result { white-space: normal; text-align: left; }
+}
+
 /* ---------- 输入框 ---------- */
 .field { display: block; margin-bottom: 13px; }
 
@@ -747,7 +960,7 @@ body::before {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.26s ease, transform 0.26s ease;
-  z-index: 60;
+  z-index: 70;
 }
 
 .toast.show { opacity: 1; transform: translate(-50%, 0); }

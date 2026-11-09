@@ -162,6 +162,7 @@
 
   <script src="js/expr.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/history.js"></script>
 
   <script>
     /* ==========================================================
@@ -781,6 +782,7 @@
       renderResult(model);
       renderSteps(model);
       renderChart(model);
+      NCHistory.record();
     }
 
     /* ---------- 结果 ---------- */

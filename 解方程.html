@@ -101,6 +101,7 @@
   <script src="js/Calculus.js"></script>
   <script src="js/Solve.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/history.js"></script>
 
   <script>
     function clearInputs() {
@@ -140,6 +141,7 @@
         });
 
         solutionEl.innerHTML = solutionText;
+        NCHistory.record();
       } catch (e) {
         solutionEl.innerHTML = "求解失败：请检查方程写法（未知数用 x 表示，等号两侧各有一个表达式）.";
       }

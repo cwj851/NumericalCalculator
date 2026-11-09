@@ -184,6 +184,7 @@
   <script src="js/Calculus.js"></script>
   <script src="js/Solve.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/history.js"></script>
 
   <script>
     /* ==========================================================
@@ -540,6 +541,7 @@
       renderResult(out, tol, maxIter, useTol);
       renderSteps(out, tol, maxIter, useTol);
       renderChart(f, df, out);
+      NCHistory.record();
     }
 
     /* ---------- 结果与过程 ---------- */

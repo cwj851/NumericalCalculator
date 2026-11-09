@@ -150,6 +150,7 @@
   <script src="js/Calculus.js"></script>
   <script src="js/Solve.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/history.js"></script>
 
   <script>
     var okToRoll = true;
@@ -206,6 +207,7 @@
 
     function runIntegral() {
       doIntegral(currentAlgo);
+      if (okToRoll) NCHistory.record();
     }
 
     function useExample(equation, aa, bb, nn) {
