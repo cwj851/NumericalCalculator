@@ -116,7 +116,10 @@ body::before {
   padding: 18px 16px calc(40px + env(safe-area-inset-bottom));
 }
 
-.workspace { display: grid; gap: 16px; align-items: start; }
+/* minmax(0, 1fr)：canvas 之类有固有宽度的元素不会把整列撑宽 */
+.workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+
+.stack { min-width: 0; }
 
 @media (min-width: 860px) {
   .workspace {
@@ -588,6 +591,35 @@ body::before {
 
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+/* ---------- 函数图像 ---------- */
+.chart-tools { display: flex; flex: 0 0 auto; gap: 6px; }
+
+.chart-box { position: relative; }
+
+.chart {
+  display: block;
+  width: 100%;
+  height: 300px;
+  border-radius: var(--radius);
+  border: 1.5px solid rgba(23, 28, 52, 0.05);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(255, 255, 255, 0.9)),
+    var(--accent-soft);
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.chart:active { cursor: grabbing; }
+
+.chart-tip {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: var(--muted);
+}
+
 /* ---------- 小屏微调 ---------- */
 @media (max-width: 420px) {
   .shell { padding: 14px 12px 32px; }
@@ -595,6 +627,8 @@ body::before {
   .btn { font-size: 14px; padding: 11px 18px; }
   .key { border-radius: 12px; }
   .titles p { display: none; }
+  .chart { height: 240px; }
+  .chart-tools .btn-sm { font-size: 12px; padding: 6px 10px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

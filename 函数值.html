@@ -14,7 +14,7 @@
       <a class="back-btn" href="index.html">← 首页</a>
       <div class="titles">
         <h1>函数值</h1>
-        <p>代入 x 的取值，求 f(x) 的数值结果</p>
+        <p>代入 x 的取值，求 f(x) 的数值结果并绘制图像</p>
       </div>
     </div>
   </header>
@@ -22,36 +22,56 @@
   <main class="shell">
     <div class="workspace">
 
-      <section class="card">
-        <h2 class="card-title">输入</h2>
+      <div class="stack">
 
-        <label class="field">
-          <span>函数 f(x)</span>
-          <input type="text" id="equation" placeholder="例如 x^2+2x+1、sin(x)、ln(x)" data-enter="calculateFunctionValue" />
-        </label>
+        <section class="card">
+          <h2 class="card-title">输入</h2>
 
-        <label class="field">
-          <span>x 的取值</span>
-          <input type="text" id="xValue" placeholder="例如 2、-1.5、pi/2" data-enter="calculateFunctionValue" />
-        </label>
+          <label class="field">
+            <span>函数 f(x)</span>
+            <input type="text" id="equation" placeholder="例如 x^2+2x+1、sin(x)、ln(x)" data-enter="calculateFunctionValue" />
+          </label>
 
-        <div class="actions">
-          <button type="button" class="btn btn-primary" onclick="calculateFunctionValue()">计 算</button>
-          <button type="button" class="btn btn-ghost" onclick="copyResult('result')">复制结果</button>
-          <button type="button" class="btn btn-ghost" onclick="clearInputs()">清 除</button>
-        </div>
+          <label class="field">
+            <span>x 的取值</span>
+            <input type="text" id="xValue" placeholder="例如 2、-1.5、pi/2" data-enter="calculateFunctionValue" />
+          </label>
 
-        <p id="result" class="result" data-empty="结果将显示在这里"></p>
-
-        <div class="examples">
-          <p>试试这些例子</p>
-          <div class="example-row">
-            <button type="button" class="example" onclick="useExample('x^2+2x+1', '2')">x²+2x+1，x=2</button>
-            <button type="button" class="example" onclick="useExample('sin(x)', 'pi/2')">sin(x)，x=π/2</button>
-            <button type="button" class="example" onclick="useExample('ln(x)+sqrt(x)', '4')">ln x+√x，x=4</button>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" onclick="calculateFunctionValue()">计 算</button>
+            <button type="button" class="btn btn-ghost" onclick="copyResult('result')">复制结果</button>
+            <button type="button" class="btn btn-ghost" onclick="clearInputs()">清 除</button>
           </div>
-        </div>
-      </section>
+
+          <p id="result" class="result" data-empty="结果将显示在这里"></p>
+
+          <div class="examples">
+            <p>试试这些例子</p>
+            <div class="example-row">
+              <button type="button" class="example" onclick="useExample('x^2+2x+1', '2')">x²+2x+1，x=2</button>
+              <button type="button" class="example" onclick="useExample('sin(x)', 'pi/2')">sin(x)，x=π/2</button>
+              <button type="button" class="example" onclick="useExample('ln(x)+sqrt(x)', '4')">ln x+√x，x=4</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2 class="card-title">函数图像</h2>
+            <div class="chart-tools">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="zoomChart(0.7)" title="放大">放大</button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="zoomChart(1 / 0.7)" title="缩小">缩小</button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="resetChart()" title="恢复到初始视图">重置</button>
+            </div>
+          </div>
+
+          <div class="chart-box">
+            <canvas id="chart" class="chart" role="img" aria-label="函数 f(x) 的图像"></canvas>
+          </div>
+          <p class="chart-tip" id="chartTip">计算出函数值后，这里会画出 f(x) 的曲线并标出代入点；拖动可平移，滚轮可缩放，双击复位。</p>
+        </section>
+
+      </div>
 
       <aside class="card side">
         <h2 class="card-title">输入面板</h2>
@@ -109,6 +129,7 @@
   <script>
     function clearInputs() {
       clearFields(["equation", "xValue"]);
+      clearChart();
     }
 
     function myParse(expression) {
@@ -213,8 +234,8 @@
       var xValue = document.getElementById("xValue").value;
       var resultEl = document.getElementById("result");
 
-      if (stripSpaces(equationText) === "") { resultEl.innerHTML = "请输入函数."; return; }
-      if (stripSpaces(xValue) === "") { resultEl.innerHTML = "请输入 x 的值."; return; }
+      if (stripSpaces(equationText) === "") { resultEl.innerHTML = "请输入函数."; clearChart(); return; }
+      if (stripSpaces(xValue) === "") { resultEl.innerHTML = "请输入 x 的值."; clearChart(); return; }
 
       try {
         var equation = myParse(equationText);
@@ -223,14 +244,497 @@
           .evaluate()
           .text();
         resultEl.innerHTML = "函数的值为：" + value;
+        renderChart(equation, equationText, xValue, value);
       } catch (e) {
         resultEl.innerHTML = "无法计算：请检查函数与 x 值的写法.";
+        clearChart("表达式无法计算，暂时无法绘制图像。");
       }
     }
 
     function substitute(expression, variable, value) {
       return expression.replace(new RegExp(variable, "g"), value);
     }
+
+    /* ==========================================================
+       函数图像：用 canvas 绘制 y = f(x)，并标出 (x, f(x))
+       - 表达式只编译一次（buildFunction），逐点采样不再解析字符串
+       - y 轴范围按采样结果自动适配，并按分位数裁剪掉渐近线带来的极端值
+       ========================================================== */
+
+    var CHART_HALF_DEFAULT = 10;   // 默认横向半宽（数据单位）
+    var CHART_TIP_DEFAULT = "计算出函数值后，这里会画出 f(x) 的曲线并标出代入点；拖动可平移，滚轮可缩放，双击复位。";
+
+    var chart = {
+      fn: null,          // 编译后的数值函数 f(x)
+      label: "",         // 用于提示的表达式
+      hasPoint: false,   // 是否存在可标记的点
+      x0: 0,
+      y0: 0,
+      center: 0,         // 视图中心 x
+      half: CHART_HALF_DEFAULT
+    };
+
+    /* ---------- 通用小工具 ---------- */
+
+    function chartCssVar(name, fallback) {
+      var value = getComputedStyle(document.body).getPropertyValue(name);
+      return (value && value.trim()) || fallback;
+    }
+
+    function chartFmt(value) {
+      if (!isFinite(value)) return "—";
+      var abs = Math.abs(value);
+      if (abs !== 0 && (abs < 0.001 || abs >= 100000)) return value.toExponential(2);
+      return String(Number(value.toFixed(4)));
+    }
+
+    function chartTick(value) {
+      if (value === 0) return "0";
+      var abs = Math.abs(value);
+      if (abs >= 10000 || abs < 0.001) return value.toExponential(0);
+      return String(Number(value.toPrecision(6)));
+    }
+
+    /* 文本 -> 数值：兼容 nerdamer 输出的分数（如 1/3） */
+    function toNumber(text) {
+      var value = Number(text);
+      if (!isNaN(value)) return value;
+      var fraction = /^(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)$/.exec(text);
+      return fraction ? Number(fraction[1]) / Number(fraction[2]) : NaN;
+    }
+
+    function evalNumber(text) {
+      try { return toNumber(nerdamer(text).evaluate().text()); } catch (e) { return NaN; }
+    }
+
+    function chartRoundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    /* 取“好看”的刻度间隔：1/2/5 × 10^n */
+    function niceStep(span, target) {
+      var raw = span / Math.max(1, target);
+      var magnitude = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10));
+      var norm = raw / magnitude;
+      var step;
+      if (norm <= 1) step = 1;
+      else if (norm <= 2) step = 2;
+      else if (norm <= 2.5) step = 2.5;
+      else if (norm <= 5) step = 5;
+      else step = 10;
+      return step * magnitude;
+    }
+
+    /* ---------- 采样与取值 ---------- */
+
+    function safeEval(x) {
+      if (!chart.fn) return NaN;
+      try {
+        var y = chart.fn(x);
+        if (typeof y !== "number" || !isFinite(y) || Math.abs(y) > 1e12) return NaN;
+        return y;
+      } catch (e) {
+        return NaN;
+      }
+    }
+
+    /* 计算纵轴显示范围：去掉渐近线导致的极端值，并保证点 (x0, f(x0)) 在视野内 */
+    function chartYRange(ys) {
+      var finite = [];
+      var i;
+      for (i = 0; i < ys.length; i++) {
+        if (isFinite(ys[i])) finite.push(ys[i]);
+      }
+      if (chart.hasPoint && isFinite(chart.y0)) finite.push(chart.y0);
+      if (finite.length === 0) return [-1, 1];
+
+      var sorted = finite.slice().sort(function (a, b) { return a - b; });
+      var last = sorted.length - 1;
+      var lo = sorted[0];
+      var hi = sorted[last];
+      var trimLo = sorted[Math.floor(last * 0.04)];
+      var trimHi = sorted[Math.ceil(last * 0.96)];
+
+      // 仅当极值远大于主体分布时才裁剪（典型场景：1/x、tan 的渐近线）；
+      // 多项式、三角函数这类主体范围本就很大的函数保留完整纵轴
+      if (trimHi > trimLo && (trimHi - trimLo) < 0.6 * (hi - lo)) {
+        var trimPad = (trimHi - trimLo) * 0.3;
+        lo = trimLo - trimPad;
+        hi = trimHi + trimPad;
+      }
+
+      if (chart.hasPoint && isFinite(chart.y0)) {
+        lo = Math.min(lo, chart.y0);
+        hi = Math.max(hi, chart.y0);
+      }
+
+      if (!(hi - lo > 1e-12)) {
+        var mid = (hi + lo) / 2;
+        lo = mid - 1;
+        hi = mid + 1;
+      }
+
+      var pad = (hi - lo) * 0.12;
+      return [lo - pad, hi + pad];
+    }
+
+    /* ---------- 绘制 ---------- */
+
+    function chartMessage(ctx, width, height, color, text) {
+      ctx.font = "13px 'PingFang SC','Microsoft YaHei',system-ui,sans-serif";
+      ctx.fillStyle = color;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, width / 2, height / 2);
+    }
+
+    function drawChart() {
+      var canvas = document.getElementById("chart");
+      if (!canvas) return;
+
+      var width = canvas.clientWidth;
+      var height = canvas.clientHeight;
+      if (!width || !height) return;
+
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      if (canvas.width !== Math.round(width * dpr) || canvas.height !== Math.round(height * dpr)) {
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+      }
+
+      var ctx = canvas.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+
+      var accent = chartCssVar("--accent", "#ff7a18");
+      var accent2 = chartCssVar("--accent-2", "#ffb703");
+      var accentInk = chartCssVar("--accent-ink", "#b45309");
+      var gridColor = chartCssVar("--line", "#e6e9f6");
+      var muted = chartCssVar("--muted", "#6c7496");
+
+      if (!chart.fn) {
+        chartMessage(ctx, width, height, muted, "输入函数并计算后显示图像");
+        return;
+      }
+
+      var vx0 = chart.center - chart.half;
+      var vx1 = chart.center + chart.half;
+
+      // —— 采样：每个像素至少 1.5 个点，保证曲线平滑 ——
+      var count = Math.min(1600, Math.max(320, Math.round(width * 1.5)));
+      var xs = new Array(count + 1);
+      var ys = new Array(count + 1);
+      var i, x, y;
+      var validCount = 0;
+
+      for (i = 0; i <= count; i++) {
+        x = vx0 + (vx1 - vx0) * i / count;
+        xs[i] = x;
+        ys[i] = safeEval(x);
+        if (isFinite(ys[i])) validCount++;
+      }
+
+      if (validCount === 0) {
+        chartMessage(ctx, width, height, muted, "当前区间内函数没有有效取值");
+        return;
+      }
+
+      var yRange = chartYRange(ys);
+      var vy0 = yRange[0];
+      var vy1 = yRange[1];
+
+      function toPx(v) { return (v - vx0) / (vx1 - vx0) * width; }
+      function toPy(v) { return height - (v - vy0) / (vy1 - vy0) * height; }
+
+      var stepX = niceStep(vx1 - vx0, Math.max(2, Math.floor(width / 70)));
+      var stepY = niceStep(vy1 - vy0, Math.max(2, Math.floor(height / 50)));
+      var k, gx, gy, px, py;
+
+      // —— 网格 ——
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = gridColor;
+      for (k = Math.ceil(vx0 / stepX); k * stepX <= vx1 + 1e-9; k++) {
+        px = toPx(k * stepX);
+        ctx.beginPath();
+        ctx.moveTo(px, 0);
+        ctx.lineTo(px, height);
+        ctx.stroke();
+      }
+      for (k = Math.ceil(vy0 / stepY); k * stepY <= vy1 + 1e-9; k++) {
+        py = toPy(k * stepY);
+        ctx.beginPath();
+        ctx.moveTo(0, py);
+        ctx.lineTo(width, py);
+        ctx.stroke();
+      }
+
+      // —— 坐标轴 ——
+      var zeroY = (vy0 <= 0 && vy1 >= 0) ? toPy(0) : null;
+      var zeroX = (vx0 <= 0 && vx1 >= 0) ? toPx(0) : null;
+      ctx.strokeStyle = "rgba(23, 28, 52, 0.35)";
+      ctx.lineWidth = 1.2;
+      if (zeroY !== null) {
+        ctx.beginPath();
+        ctx.moveTo(0, zeroY);
+        ctx.lineTo(width, zeroY);
+        ctx.stroke();
+      }
+      if (zeroX !== null) {
+        ctx.beginPath();
+        ctx.moveTo(zeroX, 0);
+        ctx.lineTo(zeroX, height);
+        ctx.stroke();
+      }
+
+      // —— 刻度文字 ——
+      ctx.font = "11px 'PingFang SC','Microsoft YaHei',system-ui,sans-serif";
+      ctx.fillStyle = muted;
+
+      var textY = zeroY !== null ? Math.min(height - 4, zeroY + 14) : height - 6;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "alphabetic";
+      for (k = Math.ceil(vx0 / stepX); k * stepX <= vx1 + 1e-9; k++) {
+        gx = k * stepX;
+        if (Math.abs(gx) < stepX * 1e-6) continue;
+        ctx.fillText(chartTick(gx), toPx(gx), textY);
+      }
+
+      // 原点处单独标一个 0（上面两轮循环都跳过了 0）
+      if (zeroX !== null && zeroY !== null) {
+        ctx.textAlign = "right";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillText("0", zeroX - 5, textY);
+      }
+
+      var textX = zeroX !== null ? Math.min(width - 4, zeroX - 6) : 4;
+      ctx.textAlign = zeroX !== null ? "right" : "left";
+      ctx.textBaseline = "middle";
+      for (k = Math.ceil(vy0 / stepY); k * stepY <= vy1 + 1e-9; k++) {
+        gy = k * stepY;
+        if (Math.abs(gy) < stepY * 1e-6) continue;
+        ctx.fillText(chartTick(gy), textX, toPy(gy));
+      }
+
+      // —— 曲线 ——
+      var gradient = ctx.createLinearGradient(0, 0, width, height);
+      gradient.addColorStop(0, accent);
+      gradient.addColorStop(1, accent2);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, width, height);
+      ctx.clip();
+
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = 2.4;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.beginPath();
+
+      var started = false;
+      var prevY = NaN;
+      var jumpLimit = (vy1 - vy0) * 3;   // 跨过不连续点（1/x、tan）时断开，避免画出竖线
+
+      for (i = 0; i <= count; i++) {
+        y = ys[i];
+        if (!isFinite(y)) {
+          started = false;
+          prevY = NaN;
+          continue;
+        }
+        px = toPx(xs[i]);
+        py = toPy(y);
+        if (py > height * 20) py = height * 20;
+        else if (py < -height * 20) py = -height * 20;
+
+        if (!started || (isFinite(prevY) && Math.abs(y - prevY) > jumpLimit)) {
+          ctx.moveTo(px, py);
+          started = true;
+        } else {
+          ctx.lineTo(px, py);
+        }
+        prevY = y;
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      // —— 代入点标记 ——
+      if (chart.hasPoint && isFinite(chart.x0) && isFinite(chart.y0)) {
+        var pxp = toPx(chart.x0);
+        var pyp = toPy(chart.y0);
+
+        if (pxp >= -2 && pxp <= width + 2 && pyp >= -2 && pyp <= height + 2) {
+          ctx.save();
+          ctx.strokeStyle = accent;
+          ctx.globalAlpha = 0.45;
+          ctx.lineWidth = 1.2;
+          if (typeof ctx.setLineDash === "function") ctx.setLineDash([4, 4]);
+
+          ctx.beginPath();
+          ctx.moveTo(pxp, Math.max(0, Math.min(height, pyp)));
+          ctx.lineTo(pxp, zeroY !== null ? zeroY : height);
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(Math.max(0, Math.min(width, pxp)), pyp);
+          ctx.lineTo(zeroX !== null ? zeroX : 0, pyp);
+          ctx.stroke();
+
+          ctx.restore();
+
+          ctx.beginPath();
+          ctx.arc(pxp, pyp, 5, 0, Math.PI * 2);
+          ctx.fillStyle = "#ffffff";
+          ctx.fill();
+          ctx.lineWidth = 2.4;
+          ctx.strokeStyle = accent;
+          ctx.stroke();
+
+          // 坐标标签，靠近边缘时自动翻转方向
+          var label = "(" + chartFmt(chart.x0) + ", " + chartFmt(chart.y0) + ")";
+          ctx.font = "600 12px 'PingFang SC','Microsoft YaHei',system-ui,sans-serif";
+          var textW = ctx.measureText(label).width;
+          var boxW = textW + 14;
+          var boxH = 22;
+          var boxX = pxp + 10;
+          var boxY = pyp - boxH - 8;
+          if (boxX + boxW > width - 2) boxX = Math.max(2, pxp - boxW - 10);
+          if (boxY < 2) boxY = Math.min(height - boxH - 2, pyp + 8);
+
+          chartRoundRect(ctx, boxX, boxY, boxW, boxH, 8);
+          ctx.fillStyle = "rgba(255, 255, 255, 0.94)";
+          ctx.fill();
+          ctx.lineWidth = 1.2;
+          ctx.strokeStyle = accent;
+          ctx.stroke();
+
+          ctx.fillStyle = accentInk;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(label, boxX + boxW / 2, boxY + boxH / 2 + 0.5);
+        }
+      }
+    }
+
+    /* ---------- 交互：缩放 / 平移 / 重置 ---------- */
+
+    function zoomChart(factor, focus) {
+      if (typeof focus !== "number" || isNaN(focus)) focus = 0.5;
+
+      var focusX = (chart.center - chart.half) + chart.half * 2 * focus;
+      var half = Math.min(1e6, Math.max(1e-6, chart.half * factor));
+
+      chart.half = half;
+      chart.center = focusX - half * (2 * focus - 1);
+      drawChart();
+    }
+
+    function resetChart() {
+      chart.half = CHART_HALF_DEFAULT;
+      chart.center = (chart.hasPoint && isFinite(chart.x0)) ? chart.x0 : 0;
+      drawChart();
+    }
+
+    /* ---------- 与计算结果对接 ---------- */
+
+    function renderChart(expression, displayText, xText, valueText) {
+      var tip = document.getElementById("chartTip");
+
+      try {
+        // 只解析一次，得到可直接调用的数值函数
+        chart.fn = nerdamer(expression).buildFunction(["x"]);
+      } catch (e) {
+        clearChart("该表达式无法绘制图像，请检查函数写法。");
+        return;
+      }
+
+      var x0 = evalNumber(xText);
+      var y0 = evalNumber(valueText);
+      if (!isFinite(y0) && isFinite(x0)) y0 = safeEval(x0);
+
+      chart.label = displayText;
+      chart.hasPoint = isFinite(x0) && isFinite(y0);
+      chart.x0 = isFinite(x0) ? x0 : 0;
+      chart.y0 = y0;
+      chart.center = isFinite(x0) ? x0 : 0;
+      chart.half = CHART_HALF_DEFAULT;
+
+      if (tip) tip.textContent = "f(x) = " + displayText + " · 拖动平移，滚轮缩放，双击复位。";
+      drawChart();
+    }
+
+    function clearChart(message) {
+      chart.fn = null;
+      chart.label = "";
+      chart.hasPoint = false;
+      chart.center = 0;
+      chart.half = CHART_HALF_DEFAULT;
+
+      var tip = document.getElementById("chartTip");
+      if (tip) tip.textContent = message || CHART_TIP_DEFAULT;
+      drawChart();
+    }
+
+    /* ---------- 初始化 ---------- */
+
+    document.addEventListener("DOMContentLoaded", function () {
+      var canvas = document.getElementById("chart");
+      if (!canvas) return;
+
+      canvas.addEventListener("wheel", function (e) {
+        if (!chart.fn) return;
+        e.preventDefault();
+
+        var rect = canvas.getBoundingClientRect();
+        var focus = (e.clientX - rect.left) / (rect.width || 1);
+        zoomChart(e.deltaY < 0 ? 0.8 : 1.25, focus);
+      }, { passive: false });
+
+      var dragging = false;
+      var lastX = 0;
+
+      canvas.addEventListener("pointerdown", function (e) {
+        if (!chart.fn) return;
+        dragging = true;
+        lastX = e.clientX;
+        if (canvas.setPointerCapture) {
+          try { canvas.setPointerCapture(e.pointerId); } catch (err) { }
+        }
+      });
+
+      canvas.addEventListener("pointermove", function (e) {
+        if (!dragging || !chart.fn) return;
+        var rect = canvas.getBoundingClientRect();
+        var dx = e.clientX - lastX;
+        lastX = e.clientX;
+
+        chart.center -= dx / (rect.width || 1) * chart.half * 2;
+        drawChart();
+      });
+
+      function endDrag() { dragging = false; }
+      canvas.addEventListener("pointerup", endDrag);
+      canvas.addEventListener("pointercancel", endDrag);
+      canvas.addEventListener("pointerleave", endDrag);
+
+      canvas.addEventListener("dblclick", function () {
+        if (chart.fn) resetChart();
+      });
+
+      var resizeTimer = null;
+      window.addEventListener("resize", function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(drawChart, 120);
+      });
+
+      drawChart();
+    });
   </script>
 </body>
 
