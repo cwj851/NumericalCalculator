@@ -264,7 +264,11 @@ var NCHistory = (function () {
   }
 
   function openDrawer() {
+    if (!drawerEl) mount();
     if (!drawerEl) return;
+
+    // display 直接改一份，避免个别浏览器里 class 切换没生效
+    drawerEl.style.display = "block";
     drawerEl.classList.add("open");
     drawerEl.setAttribute("aria-hidden", "false");
     document.body.classList.add("history-open");
@@ -273,6 +277,7 @@ var NCHistory = (function () {
 
   function closeDrawer() {
     if (!drawerEl) return;
+    drawerEl.style.display = "none";
     drawerEl.classList.remove("open");
     drawerEl.setAttribute("aria-hidden", "true");
     document.body.classList.remove("history-open");
@@ -302,10 +307,13 @@ var NCHistory = (function () {
     btn.appendChild(text);
     btn.appendChild(badge);
 
-    btn.addEventListener("click", function () {
+    // 用 onclick 属性而不是 addEventListener：部分手机 WebView 里更稳，
+    // 且重复绑定也只会保留最后一次
+    btn.onclick = function (event) {
+      if (event && event.preventDefault) event.preventDefault();
       if (drawerEl && drawerEl.classList.contains("open")) closeDrawer();
       else openDrawer();
-    });
+    };
 
     return { btn: btn, badge: badge };
   }
@@ -384,16 +392,22 @@ var NCHistory = (function () {
     listEl = parts.list;
     listEl.addEventListener("click", onListClick);
 
-    var toggle = buildToggle();
-    badgeEl = toggle.badge;
-
     var bar = document.querySelector(".topbar-inner") || document.querySelector(".topbar");
-    if (bar) {
-      bar.appendChild(toggle.btn);
+    var existed = bar ? bar.querySelector(".history-toggle") : null;
+
+    if (existed) {
+      badgeEl = existed.querySelector(".history-count");
     } else {
-      // 没有顶栏的页面：按钮固定在右上角
-      toggle.btn.classList.add("history-toggle-floating");
-      document.body.appendChild(toggle.btn);
+      var toggle = buildToggle();
+      badgeEl = toggle.badge;
+
+      if (bar) {
+        bar.appendChild(toggle.btn);
+      } else {
+        // 没有顶栏的页面：按钮固定在右上角
+        toggle.btn.classList.add("history-toggle-floating");
+        document.body.appendChild(toggle.btn);
+      }
     }
 
     render();
