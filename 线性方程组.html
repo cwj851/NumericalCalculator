@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>线性方程组 · 数值计算器</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body class="theme-linsys">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="back-btn" href="index.html">← 首页</a>
+      <div class="titles">
+        <h1>线性方程组</h1>
+        <p>高斯消元 · 列主元 · LU 分解 · 雅可比 · 高斯-赛德尔</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <nav class="tabs" role="tablist" aria-label="方程组求解方法">
+      <button type="button" class="tab active" role="tab" data-method="1" onclick="selectMethod(1)">高斯消元法</button>
+      <button type="button" class="tab" role="tab" data-method="2" onclick="selectMethod(2)">列主元高斯消元法</button>
+      <button type="button" class="tab" role="tab" data-method="3" onclick="selectMethod(3)">直接三角分解法</button>
+      <button type="button" class="tab" role="tab" data-method="4" onclick="selectMethod(4)">雅可比迭代</button>
+      <button type="button" class="tab" role="tab" data-method="5" onclick="selectMethod(5)">高斯-赛德尔迭代</button>
+    </nav>
+
+    <div class="workspace">
+
+      <div class="stack">
+
+        <section class="card">
+          <div class="card-head">
+            <h2 class="card-title">方程组</h2>
+            <span class="point-count" id="sizeLabel">共 3 个方程</span>
+          </div>
+
+          <div class="n-stepper">
+            <button type="button" class="step-btn" onclick="changeSize(-1)" title="减少一个方程">−</button>
+            <span class="step-value" id="sizeValue">3</span>
+            <button type="button" class="step-btn" onclick="changeSize(1)" title="添加一个方程">+</button>
+            <span class="step-hint">方程个数 = 未知数个数（2 ~ 8）</span>
+          </div>
+
+          <p class="card-note">系数可以写 1/3、sqrt(2)、pi/2 这类表达式；右侧一列是常数项 b。</p>
+
+          <div class="matrix-scroll">
+            <div class="matrix-grid" id="matrixGrid"></div>
+          </div>
+
+          <div id="iterFields">
+            <label class="field">
+              <span>初值向量 x⁽⁰⁾（逗号分隔，留空为全 0）</span>
+              <input type="text" id="initialVector" inputmode="text" placeholder="例如 0,0,0" />
+            </label>
+
+            <div class="field-grid">
+              <label class="field">
+                <span>精度 tol</span>
+                <input type="text" id="tolerance" value="0.000001" placeholder="例如 1e-6" />
+              </label>
+              <label class="field">
+                <span>最大迭代次数 N</span>
+                <input type="text" id="maxIter" value="100" placeholder="例如 100" />
+              </label>
+            </div>
+          </div>
+
+          <p class="algo-hint" id="methodHint"></p>
+
+          <div class="actions">
+            <button type="button" class="btn btn-primary" onclick="solveSystem()">求 解</button>
+            <button type="button" class="btn btn-ghost" onclick="clearInputs()">清 除</button>
+          </div>
+
+          <div class="examples">
+            <p>快速示例</p>
+            <div class="example-row">
+              <button type="button" class="example" onclick="useExample(0)">对角占优 3 阶</button>
+              <button type="button" class="example" onclick="useExample(1)">需换主元 3 阶</button>
+              <button type="button" class="example" onclick="useExample(2)">三对角 4 阶</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2 class="card-title">结果</h2>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="copyResult('result')">复制结果</button>
+          </div>
+          <p id="result" class="result" data-empty="填好系数矩阵与常数项后点击“求解”"></p>
+        </section>
+
+        <section class="card" id="stepsCard" style="display:none">
+          <div class="card-head">
+            <h2 class="card-title">求解过程</h2>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="copySteps()">复制过程</button>
+          </div>
+          <div class="steps" id="steps"></div>
+        </section>
+
+        <section class="card" id="chartCard" style="display:none">
+          <div class="card-head">
+            <h2 class="card-title">收敛过程</h2>
+          </div>
+          <div class="chart-box">
+            <canvas id="chart" class="chart" role="img" aria-label="迭代误差随次数变化"></canvas>
+          </div>
+          <p class="chart-tip" id="chartTip">迭代法求解后，这里显示误差随迭代次数的变化。</p>
+        </section>
+
+      </div>
+
+      <aside class="card side">
+        <h2 class="card-title">输入面板</h2>
+        <p class="card-note">插入到光标所在的输入框；系数可用 1/3、sqrt(2) 这类表达式。</p>
+
+        <div class="chips">
+          <button type="button" class="chip" onclick="insertSymbol('/')">÷</button>
+          <button type="button" class="chip" onclick="insertSymbol('sqrt()')">√</button>
+          <button type="button" class="chip" onclick="insertSymbol('pi')">π</button>
+          <button type="button" class="chip" onclick="insertSymbol('e')">e</button>
+          <button type="button" class="chip" onclick="insertSymbol('(')">(</button>
+          <button type="button" class="chip" onclick="insertSymbol(')')">)</button>
+          <button type="button" class="chip chip-key" onclick="insertSymbol(',')">,</button>
+          <button type="button" class="chip chip-key" onclick="insertSymbol('-')">−</button>
+        </div>
+
+        <div class="keypad">
+          <button type="button" class="key" onclick="insertSymbol('7')">7</button>
+          <button type="button" class="key" onclick="insertSymbol('8')">8</button>
+          <button type="button" class="key" onclick="insertSymbol('9')">9</button>
+          <button type="button" class="key back" onclick="backspace()">⌫</button>
+
+          <button type="button" class="key" onclick="insertSymbol('4')">4</button>
+          <button type="button" class="key" onclick="insertSymbol('5')">5</button>
+          <button type="button" class="key" onclick="insertSymbol('6')">6</button>
+          <button type="button" class="key op" onclick="insertSymbol('/')">÷</button>
+
+          <button type="button" class="key" onclick="insertSymbol('1')">1</button>
+          <button type="button" class="key" onclick="insertSymbol('2')">2</button>
+          <button type="button" class="key" onclick="insertSymbol('3')">3</button>
+          <button type="button" class="key op" onclick="insertSymbol('-')">−</button>
+
+          <button type="button" class="key" onclick="insertSymbol('0')">0</button>
+          <button type="button" class="key" onclick="insertSymbol('.')">.</button>
+          <button type="button" class="key op" onclick="insertSymbol(',')">,</button>
+          <button type="button" class="key op" onclick="insertSymbol('+')">+</button>
+        </div>
+      </aside>
+
+    </div>
+  </main>
+
+  <div id="toast" class="toast">已复制</div>
+
+  <script src="js/expr.js"></script>
+  <script src="js/ui.js"></script>
+
+  <script>
+    /* ==========================================================
+       线性方程组：高斯消元 / 列主元 / LU 分解 / 雅可比 / 高斯-赛德尔
+       ========================================================== */
+
+    var currentMethod = 1;
+    var matrixSize = 3;
+
+    var METHOD_INFO = {
+      1: {
+        name: "高斯消元法",
+        iterative: false,
+        hint: "高斯消元：按自然顺序以 aᵢᵢ 为主元，逐列把下方元素消成 0，得到上三角后回代。主元为 0 时无法继续（需换行），因此对矩阵顺序敏感。"
+      },
+      2: {
+        name: "列主元高斯消元法",
+        iterative: false,
+        hint: "列主元高斯消元：每一步在当前列下方选绝对值最大的元素作主元并交换两行，再消元。可避免小主元放大舍入误差，主元为 0 才说明矩阵奇异。"
+      },
+      3: {
+        name: "直接三角分解法",
+        iterative: false,
+        hint: "Doolittle 分解：把 A 分解为 A = LU（L 为单位下三角，U 为上三角），先解 Ly = b 得 y，再解 Ux = y 得 x。矩阵不变时可重复使用同一分解。"
+      },
+      4: {
+        name: "雅可比迭代法",
+        iterative: true,
+        hint: "雅可比迭代：由 aᵢᵢxᵢ = bᵢ − Σⱼ≠ᵢ aᵢⱼxⱼ 构造 xᵢ⁽ᵏ⁺¹⁾ = (bᵢ − Σⱼ≠ᵢ aᵢⱼxⱼ⁽ᵏ⁾)/aᵢᵢ，右端全部使用上一轮的旧值。矩阵严格对角占优时一定收敛。"
+      },
+      5: {
+        name: "高斯-赛德尔迭代法",
+        iterative: true,
+        hint: "高斯-赛德尔迭代：与雅可比同样的迭代格式，但计算 xᵢ⁽ᵏ⁺¹⁾ 时已更新的 xⱼ⁽ᵏ⁺¹⁾（j < i）立即参与运算，通常比雅可比收敛更快。"
+      }
+    };
+
+    var PRESETS = [
+      {
+        size: 3,
+        a: [[10, -1, 2], [-1, 10, -1], [2, -2, 10]],
+        b: [14, 16, 28]
+      },
+      {
+        size: 3,
+        a: [[0, 2, 1], [1, 1, 1], [2, 1, 3]],
+        b: [5, 6, 8]
+      },
+      {
+        size: 4,
+        a: [[4, -1, 0, 0], [-1, 4, -1, 0], [0, -1, 4, -1], [0, 0, -1, 3]],
+        b: [2, 4, 6, 9]
+      }
+    ];
+
+    /* ---------- 基础工具 ---------- */
+
+    var SUP_MAP = { "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹" };
+    var SUB_MAP = { "0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄", "5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉" };
+
+    function sub(n) {
+      return String(n).split("").map(function (ch) { return SUB_MAP[ch] || ch; }).join("");
+    }
+
+    function expLabel(e) {
+      if (e === 0) return "1";
+      var digits = String(Math.abs(e)).split("").map(function (ch) { return SUP_MAP[ch] || ch; }).join("");
+      return "10" + (e < 0 ? "⁻" : "") + digits;
+    }
+
+    function fmtNum(v) {
+      if (typeof v !== "number" || !isFinite(v)) return "—";
+      if (v === 0) return "0";
+      var abs = Math.abs(v);
+      if (abs >= 1e6 || abs < 1e-6) return v.toExponential(4);
+      return String(Number(v.toPrecision(8)));
+    }
+
+    function stripSpaces(text) {
+      var out = "";
+      for (var i = 0; i < text.length; i++) {
+        var ch = text.substring(i, i + 1);
+        if (ch !== " ") out += ch;
+      }
+      return out;
+    }
+
+    function vectorText(list) {
+      var parts = [];
+      for (var i = 0; i < list.length; i++) parts.push(fmtNum(list[i]));
+      return parts.join(", ");
+    }
+
+    /* 负数加括号，避免出现 "− -0.8×3" 这种别扭写法 */
+    function numParen(v) {
+      return v < 0 ? "(" + fmtNum(v) + ")" : fmtNum(v);
+    }
+
+    /* 形如 " − 0.8×3" / " + 0.8×3" 的项：表示 b − aᵢⱼxⱼ 中的那一项 */
+    function subTerm(coef, value) {
+      var product = coef * value;
+      return (product < 0 ? " + " : " − ") + fmtNum(Math.abs(coef)) + "×" + numParen(value);
+    }
+
+    /* 形如 " − 0.1×(−1)" 的项：表示 a − l·u 中的那一项 */
+    function mulTerm(a, b) {
+      var product = a * b;
+      return (product < 0 ? " + " : " − ") + fmtNum(Math.abs(a)) + "×" + numParen(b);
+    }
+
+    function readNumber(id) {
+      var el = document.getElementById(id);
+      if (!el) return NaN;
+      var text = stripSpaces(el.value);
+      if (text === "") return NaN;
+      var parsed = parseCellValue(text);
+      if (parsed.error) return NaN;
+      return parsed.value;
+    }
+
+    function zeroVector(n) {
+      var out = [];
+      for (var i = 0; i < n; i++) out.push(0);
+      return out;
+    }
+
+    function pickRows(list, head, tail) {
+      if (list.length <= head + tail) return list.map(function (v, i) { return i; });
+      var idx = [];
+      for (var i = 0; i < head; i++) idx.push(i);
+      idx.push(-1);
+      for (var j = list.length - tail; j < list.length; j++) idx.push(j);
+      return idx;
+    }
+
+    /* ---------- 矩阵输入 ---------- */
+
+    function matrixGrid() {
+      return document.getElementById("matrixGrid");
+    }
+
+    function bindMatrixInput(input) {
+      input.addEventListener("focus", function () {
+        if (input.id) ElementId = input.id;
+        syncEcho();
+      });
+      input.addEventListener("input", syncEcho);
+      input.addEventListener("keyup", syncEcho);
+      input.addEventListener("click", syncEcho);
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          solveSystem();
+        }
+      });
+    }
+
+    function makeMatrixInput(id, value, label, extraClass) {
+      var input = document.createElement("input");
+      input.type = "text";
+      input.id = id;
+      input.value = value;
+      input.setAttribute("inputmode", "text");
+      input.setAttribute("data-label", label);
+      input.className = extraClass || "";
+      bindMatrixInput(input);
+      return input;
+    }
+
+    function makeSpan(text, className) {
+      var span = document.createElement("span");
+      span.className = className || "";
+      span.textContent = text;
+      return span;
+    }
+
+    function renderMatrix(values) {
+      var grid = matrixGrid();
+      if (!grid) return;
+
+      var n = matrixSize;
+      grid.innerHTML = "";
+      grid.style.gridTemplateColumns = "30px repeat(" + n + ", minmax(58px, 1fr)) minmax(64px, 1fr)";
+
+      var minWidth = 30 + 64 + n * 58 + (n + 1) * 8;
+      grid.style.minWidth = minWidth + "px";
+
+      grid.appendChild(makeSpan("", "matrix-idx"));
+      for (var j = 0; j < n; j++) grid.appendChild(makeSpan("x" + sub(j + 1), "matrix-tag"));
+      grid.appendChild(makeSpan("b", "matrix-tag"));
+
+      for (var i = 0; i < n; i++) {
+        grid.appendChild(makeSpan(String(i + 1), "matrix-idx"));
+
+        for (j = 0; j < n; j++) {
+          var value = values && values.a && values.a[i] ? values.a[i][j] : "";
+          grid.appendChild(makeMatrixInput(
+            "a" + i + "_" + j,
+            value === undefined ? "" : String(value),
+            "第 " + (i + 1) + " 个方程 x" + sub(j + 1) + " 的系数"
+          ));
+        }
+
+        var bValue = values && values.b ? values.b[i] : "";
+        grid.appendChild(makeMatrixInput(
+          "b" + i,
+          bValue === undefined ? "" : String(bValue),
+          "第 " + (i + 1) + " 个方程的常数项",
+          "b-col"
+        ));
+      }
+
+      if (!document.getElementById(ElementId)) ElementId = "a0_0";
+      updateSizeLabel();
+      syncEcho();
+    }
+
+    function updateSizeLabel() {
+      var label = document.getElementById("sizeLabel");
+      if (label) label.textContent = "共 " + matrixSize + " 个方程";
+
+      var value = document.getElementById("sizeValue");
+      if (value) value.textContent = String(matrixSize);
+    }
+
+    function readRawMatrix() {
+      var a = [], b = [];
+      for (var i = 0; i < matrixSize; i++) {
+        a.push([]);
+        for (var j = 0; j < matrixSize; j++) {
+          var el = document.getElementById("a" + i + "_" + j);
+          a[i].push(el ? el.value : "");
+        }
+        var bel = document.getElementById("b" + i);
+        b.push(bel ? bel.value : "");
+      }
+      return { a: a, b: b };
+    }
+
+    function changeSize(delta) {
+      var next = matrixSize + delta;
+      if (next < 2) { showToast("至少 2 个方程"); return; }
+      if (next > 8) { showToast("最多 8 个方程"); return; }
+
+      var raw = readRawMatrix();
+      var a = [], b = [];
+
+      for (var i = 0; i < next; i++) {
+        a.push([]);
+        for (var j = 0; j < next; j++) {
+          a[i].push(raw.a[i] && raw.a[i][j] !== undefined ? raw.a[i][j] : "");
+        }
+        b.push(raw.b[i] !== undefined ? raw.b[i] : "");
+      }
+
+      matrixSize = next;
+      renderMatrix({ a: a, b: b });
+      clearOutput();
+    }
+
+    function readSystem() {
+      var raw = readRawMatrix();
+      var A = [], b = [];
+
+      for (var i = 0; i < matrixSize; i++) {
+        A.push([]);
+        for (var j = 0; j < matrixSize; j++) {
+          var cell = parseCellValue(raw.a[i][j]);
+          if (cell.empty) return { error: "第 " + (i + 1) + " 个方程里 x" + sub(j + 1) + " 的系数没有填写。" };
+          if (cell.error) return { error: "第 " + (i + 1) + " 个方程 x" + sub(j + 1) + " 的系数算不出来：" + cell.error };
+          A[i].push(cell.value);
+        }
+
+        var bc = parseCellValue(raw.b[i]);
+        if (bc.empty) return { error: "第 " + (i + 1) + " 个方程的常数项没有填写。" };
+        if (bc.error) return { error: "第 " + (i + 1) + " 个方程的常数项算不出来：" + bc.error };
+        b.push(bc.value);
+      }
+
+      return { A: A, b: b };
+    }
+
+    function readInitial() {
+      var el = document.getElementById("initialVector");
+      var text = normalizeExpr(el ? el.value : "");
+      if (text === "") return { list: null };
+
+      var parts = text.split(",");
+      var list = [];
+
+      for (var i = 0; i < parts.length; i++) {
+        if (parts[i] === "") continue;
+        var cell = parseCellValue(parts[i]);
+        if (cell.error) return { error: "初值第 " + (i + 1) + " 个分量算不出来：" + cell.error };
+        list.push(cell.value);
+      }
+
+      if (list.length !== matrixSize) {
+        return { error: "初值向量应有 " + matrixSize + " 个分量，当前填了 " + list.length + " 个。" };
+      }
+      return { list: list };
+    }
+
+    /* ---------- 页面交互 ---------- */
+
+    function selectMethod(num) {
+      currentMethod = num;
+
+      var tabs = document.querySelectorAll(".tabs .tab[data-method]");
+      for (var i = 0; i < tabs.length; i++) {
+        var active = tabs[i].getAttribute("data-method") == String(num);
+        tabs[i].className = active ? "tab active" : "tab";
+        tabs[i].setAttribute("aria-selected", active ? "true" : "false");
+      }
+
+      document.getElementById("iterFields").style.display = METHOD_INFO[num].iterative ? "" : "none";
+      document.getElementById("methodHint").innerHTML = METHOD_INFO[num].hint;
+      clearOutput();
+    }
+
+    function useExample(index) {
+      var preset = PRESETS[index];
+      if (!preset) return;
+
+      matrixSize = preset.size;
+      var a = preset.a.map(function (row) { return row.map(String); });
+      renderMatrix({ a: a, b: preset.b.map(String) });
+      document.getElementById("initialVector").value = "";
+      clearOutput();
+      solveSystem();
+    }
+
+    function clearInputs() {
+      var n = matrixSize;
+      var a = [], b = [];
+      for (var i = 0; i < n; i++) {
+        a.push([]);
+        for (var j = 0; j < n; j++) a[i].push("");
+        b.push("");
+      }
+      renderMatrix({ a: a, b: b });
+      document.getElementById("initialVector").value = "";
+      ElementId = "a0_0";
+      clearOutput();
+    }
+
+    function clearOutput() {
+      document.getElementById("result").innerHTML = "";
+      document.getElementById("steps").innerHTML = "";
+      document.getElementById("stepsCard").style.display = "none";
+      hideChart();
+    }
+
+    function showError(message) {
+      document.getElementById("result").innerHTML = message;
+      document.getElementById("steps").innerHTML = "";
+      document.getElementById("stepsCard").style.display = "none";
+      hideChart();
+    }
+
+    function hideChart() {
+      var card = document.getElementById("chartCard");
+      if (card) card.style.display = "none";
+      chartData.points = [];
+      chartData.tol = null;
+    }
+
+    function copySteps() {
+      var card = document.getElementById("stepsCard");
+      var box = document.getElementById("steps");
+      if (!card || card.style.display === "none" || !box || !box.textContent.trim()) {
+        showToast("还没有可复制的过程");
+        return;
+      }
+      copyText(box.innerText || box.textContent);
+    }
+
+    /* ---------- 求解入口 ---------- */
+
+    function solveSystem() {
+      var sys = readSystem();
+      if (sys.error) { showError(sys.error); return; }
+
+      var tol = NaN, maxIter = NaN, x0 = null;
+
+      if (METHOD_INFO[currentMethod].iterative) {
+        tol = readNumber("tolerance");
+        maxIter = readNumber("maxIter");
+
+        if (!(tol > 0)) { showError("精度 tol 必须是正数。"); return; }
+        if (!(maxIter >= 1) || Math.floor(maxIter) !== maxIter) { showError("最大迭代次数 N 必须是正整数。"); return; }
+        if (maxIter > 10000) { showError("最大迭代次数过大，请不超过 10000。"); return; }
+
+        var init = readInitial();
+        if (init.error) { showError(init.error); return; }
+        x0 = init.list || zeroVector(matrixSize);
+      }
+
+      var out;
+      if (currentMethod === 1) out = gaussSolve(sys.A, sys.b, false);
+      else if (currentMethod === 2) out = gaussSolve(sys.A, sys.b, true);
+      else if (currentMethod === 3) out = luSolve(sys.A, sys.b);
+      else out = iterativeSolve(sys.A, sys.b, x0, tol, maxIter, currentMethod === 5);
+
+      if (out.error) { showError(out.error); return; }
+
+      out.A = sys.A;
+      out.b = sys.b;
+      out.residual = residual(sys.A, sys.b, out.x);
+
+      renderResult(out, tol, maxIter);
+      renderSteps(out, tol, maxIter);
+      renderChart(out, tol);
+    }
+
+    /* ---------- 算法 ---------- */
+
+    function residual(A, b, x) {
+      var max = 0;
+      for (var i = 0; i < A.length; i++) {
+        var sum = b[i];
+        for (var j = 0; j < A.length; j++) sum -= A[i][j] * x[j];
+        max = Math.max(max, Math.abs(sum));
+      }
+      return max;
+    }
+
+    function gaussSolve(A, b, usePivot) {
+      var n = A.length;
+      var M = A.map(function (row) { return row.slice(); });
+      var rhs = b.slice();
+      var steps = [], i, j, k;
+
+      for (k = 0; k < n - 1; k++) {
+        var pivotRow = k;
+
+        if (usePivot) {
+          for (i = k + 1; i < n; i++) {
+            if (Math.abs(M[i][k]) > Math.abs(M[pivotRow][k])) pivotRow = i;
+          }
+          if (Math.abs(M[pivotRow][k]) < 1e-13) {
+            return { error: "第 " + (k + 1) + " 列主元全为 0，系数矩阵奇异，方程组没有唯一解。" };
+          }
+          if (pivotRow !== k) {
+            var tmpRow = M[k]; M[k] = M[pivotRow]; M[pivotRow] = tmpRow;
+            var tmpB = rhs[k]; rhs[k] = rhs[pivotRow]; rhs[pivotRow] = tmpB;
+          }
+        } else if (Math.abs(M[k][k]) < 1e-13) {
+          return {
+            error: "第 " + (k + 1) + " 步主元 a" + sub(k + 1) + sub(k + 1) +
+              " = 0，高斯消元法无法继续。请改用列主元高斯消元法。"
+          };
+        }
+
+        var mult = [];
+        for (i = k + 1; i < n; i++) {
+          var m = M[i][k] / M[k][k];
+          mult.push({ row: i, value: m });
+
+          M[i][k] = 0;
+          for (j = k + 1; j < n; j++) M[i][j] -= m * M[k][j];
+          rhs[i] -= m * rhs[k];
+        }
+
+        steps.push({
+          k: k,
+          pivotRow: pivotRow,
+          pivot: M[k][k],
+          mult: mult,
+          M: M.map(function (row) { return row.slice(); }),
+          rhs: rhs.slice()
+        });
+      }
+
+      if (Math.abs(M[n - 1][n - 1]) < 1e-13) {
+        return { error: "消元后最后一个主元为 0，系数矩阵奇异，方程组没有唯一解。" };
+      }
+
+      var x = new Array(n);
+      var back = [];
+
+      for (i = n - 1; i >= 0; i--) {
+        var sum = rhs[i];
+        var terms = [];
+
+        for (j = i + 1; j < n; j++) {
+          sum -= M[i][j] * x[j];
+          if (M[i][j] !== 0 && x[j] !== 0) terms.push(subTerm(M[i][j], x[j]));
+        }
+
+        x[i] = sum / M[i][i];
+        back.push({ i: i, diag: M[i][i], rhs: rhs[i], terms: terms, value: x[i] });
+      }
+
+      return { x: x, steps: steps, back: back, U: M, rhs: rhs };
+    }
+
+    function luSolve(A, b) {
+      var n = A.length;
+      var L = [], U = [], i, j, k, r;
+
+      for (i = 0; i < n; i++) {
+        L.push([]);
+        U.push([]);
+        for (j = 0; j < n; j++) {
+          L[i].push(0);
+          U[i].push(0);
+        }
+        L[i][i] = 1;
+      }
+
+      var steps = [];
+
+      for (k = 0; k < n; k++) {
+        var uNotes = [], lNotes = [];
+
+        for (j = k; j < n; j++) {
+          var s = A[k][j];
+          var terms = [];
+          for (r = 0; r < k; r++) {
+            s -= L[k][r] * U[r][j];
+            if (L[k][r] !== 0 && U[r][j] !== 0) terms.push(mulTerm(L[k][r], U[r][j]));
+          }
+          U[k][j] = s;
+          uNotes.push("u" + sub(k + 1) + sub(j + 1) + " = a" + sub(k + 1) + sub(j + 1) +
+            terms.join("") + " = " + fmtNum(s));
+        }
+
+        if (Math.abs(U[k][k]) < 1e-13) {
+          return {
+            error: "第 " + (k + 1) + " 步 u" + sub(k + 1) + sub(k + 1) +
+              " = 0，Doolittle 分解无法继续（需要换行）。可改用列主元高斯消元法。"
+          };
+        }
+
+        for (i = k + 1; i < n; i++) {
+          var t = A[i][k];
+          var lterms = [];
+          for (r = 0; r < k; r++) {
+            t -= L[i][r] * U[r][k];
+            if (L[i][r] !== 0 && U[r][k] !== 0) lterms.push(mulTerm(L[i][r], U[r][k]));
+          }
+          L[i][k] = t / U[k][k];
+          lNotes.push("l" + sub(i + 1) + sub(k + 1) + " = (" + fmtNum(A[i][k]) + lterms.join("") +
+            ") / " + numParen(U[k][k]) + " = " + fmtNum(L[i][k]));
+        }
+
+        steps.push({
+          k: k,
+          uNotes: uNotes,
+          lNotes: lNotes,
+          L: L.map(function (row) { return row.slice(); }),
+          U: U.map(function (row) { return row.slice(); })
+        });
+      }
+
+      var y = new Array(n), ySteps = [];
+      for (i = 0; i < n; i++) {
+        var s2 = b[i];
+        var t2 = [];
+        for (r = 0; r < i; r++) {
+          s2 -= L[i][r] * y[r];
+          if (L[i][r] !== 0 && y[r] !== 0) t2.push(subTerm(L[i][r], y[r]));
+        }
+        y[i] = s2;
+        ySteps.push({ i: i, rhs: b[i], terms: t2, value: y[i] });
+      }
+
+      var x = new Array(n), back = [];
+      for (i = n - 1; i >= 0; i--) {
+        var s3 = y[i];
+        var t3 = [];
+        for (j = i + 1; j < n; j++) {
+          s3 -= U[i][j] * x[j];
+          if (U[i][j] !== 0 && x[j] !== 0) t3.push(subTerm(U[i][j], x[j]));
+        }
+        x[i] = s3 / U[i][i];
+        back.push({ i: i, diag: U[i][i], rhs: y[i], terms: t3, value: x[i] });
+      }
+
+      return { x: x, steps: steps, L: L, U: U, y: y, ySteps: ySteps, back: back };
+    }
+
+    function iterativeSolve(A, b, x0, tol, maxIter, isGS) {
+      var n = A.length, i, j, k;
+
+      for (i = 0; i < n; i++) {
+        if (Math.abs(A[i][i]) < 1e-13) {
+          return { error: "第 " + (i + 1) + " 个方程的对角元为 0，无法迭代。请调整方程顺序或改用直接法。" };
+        }
+      }
+
+      var x = x0.slice();
+      var history = [];
+      var reason = "count";
+
+      for (k = 1; k <= maxIter; k++) {
+        var next = x.slice();
+
+        for (i = 0; i < n; i++) {
+          var sum = b[i];
+          for (j = 0; j < n; j++) {
+            if (j === i) continue;
+            var source = (isGS && j < i) ? next[j] : x[j];
+            sum -= A[i][j] * source;
+          }
+          next[i] = sum / A[i][i];
+        }
+
+        var err = 0;
+        for (i = 0; i < n; i++) err = Math.max(err, Math.abs(next[i] - x[i]));
+
+        history.push({ k: k, x: next.slice(), err: err });
+        x = next;
+
+        if (err <= tol) { reason = "tol"; break; }
+      }
+
+      return {
+        x: x, x0: x0.slice(), history: history,
+        iterations: history.length, reason: reason
+      };
+    }
+
+    /* ---------- 结果 ---------- */
+
+    function renderResult(out, tol, maxIter) {
+      var html = "解 x = (" + vectorText(out.x) + ")<br>";
+      html += "残差 ‖Ax − b‖∞ = " + fmtNum(out.residual) + "<br>";
+
+      if (METHOD_INFO[currentMethod].iterative) {
+        html += "迭代 " + out.iterations + " 次 · " +
+          (out.reason === "tol"
+            ? "达到精度 tol = " + fmtNum(tol)
+            : "未达到精度，已跑满 " + maxIter + " 次");
+
+        if (out.residual > tol) {
+          html += "<br>注：停止条件按 ‖Δx‖∞ 判断，因此残差可能略大于 tol，可减小 tol 再算。";
+        }
+      } else if (currentMethod === 3) {
+        html += "LU 分解 + 前代、回代完成（" + matrixSize + " 阶）";
+      } else {
+        html += "消元 " + out.steps.length + " 步 + 回代完成（" + matrixSize + " 阶）";
+      }
+
+      document.getElementById("result").innerHTML = html;
+    }
+
+    /* ---------- 过程 ---------- */
+
+    function equationText(A, b) {
+      var lines = [];
+
+      for (var i = 0; i < A.length; i++) {
+        var terms = [];
+        for (var j = 0; j < A[i].length; j++) {
+          var c = A[i][j];
+          if (c === 0) continue;
+
+          var mag = Math.abs(c);
+          var body = (mag === 1 ? "" : fmtNum(mag)) + "x" + sub(j + 1);
+
+          if (!terms.length) terms.push((c < 0 ? "−" : "") + body);
+          else terms.push((c < 0 ? " − " : " + ") + body);
+        }
+        lines.push((terms.join("") || "0") + " = " + fmtNum(b[i]));
+      }
+
+      return lines.join("；");
+    }
+
+    function matrixHtml(M, rhs, pivot) {
+      var n = M.length;
+      var html = '<div class="step-table-wrap"><table class="step-table"><thead><tr><th></th>';
+
+      for (var j = 0; j < n; j++) html += "<th>x" + sub(j + 1) + "</th>";
+      if (rhs) html += "<th>b</th>";
+      html += "</tr></thead><tbody>";
+
+      for (var i = 0; i < n; i++) {
+        html += "<tr><td>" + (i + 1) + "</td>";
+
+        for (j = 0; j < n; j++) {
+          var mark = pivot && pivot[0] === i && pivot[1] === j;
+          var text = fmtNum(M[i][j]);
+          html += "<td>" + (mark ? "<b>" + text + "</b>" : text) + "</td>";
+        }
+
+        if (rhs) html += "<td>" + fmtNum(rhs[i]) + "</td>";
+        html += "</tr>";
+      }
+
+      return html + "</tbody></table></div>";
+    }
+
+    function gaussStepsHtml(out) {
+      var html = "";
+      var s, m;
+
+      html += '<p class="step-formula">用初等行变换把增广矩阵 [A | b] 化为上三角：第 k 步以第 k 行为基准行，对下方各行做 行ᵢ ← 行ᵢ − mᵢₖ·行ₖ（mᵢₖ = aᵢₖ/aₖₖ），最后自下而上回代</p>';
+
+      html += '<p class="step-line"><b>初始增广矩阵</b></p>';
+      html += matrixHtml(out.A, out.b, null);
+
+      for (s = 0; s < out.steps.length; s++) {
+        var st = out.steps[s];
+        var head = '<p class="step-line"><b>第 ' + (st.k + 1) + ' 步</b> ';
+
+        if (st.pivotRow !== st.k) {
+          head += "交换第 " + (st.pivotRow + 1) + " 行与第 " + (st.k + 1) + " 行（列主元），";
+        }
+        head += "主元 a" + sub(st.k + 1) + sub(st.k + 1) + " = " + fmtNum(st.pivot) + "</p>";
+        html += head;
+
+        var multText = [];
+        for (m = 0; m < st.mult.length; m++) {
+          multText.push("m" + sub(st.mult[m].row + 1) + sub(st.k + 1) + " = " + fmtNum(st.mult[m].value));
+        }
+        html += '<p class="step-formula">乘数：' + multText.join("，") + "；消元后：</p>";
+        html += matrixHtml(st.M, st.rhs, [st.k, st.k]);
+      }
+
+      html += '<p class="step-line"><b>回代</b> 由上三角自下而上求 x：</p>';
+
+      for (s = 0; s < out.back.length; s++) {
+        var bs = out.back[s];
+        html += '<p class="step-formula">x' + sub(bs.i + 1) + " = (" + fmtNum(bs.rhs) + bs.terms.join("") +
+          ") / " + numParen(bs.diag) + " = " + fmtNum(bs.value) + "</p>";
+      }
+
+      return html;
+    }
+
+    function luStepsHtml(out) {
+      var html = "";
+      var s, i;
+
+      html += '<p class="step-formula">Doolittle 分解 A = LU：L 为单位下三角（lᵢᵢ = 1），U 为上三角。uₖⱼ = aₖⱼ − Σᵣ&lt;ₖ lₖᵣuᵣⱼ（j ≥ k），lᵢₖ = (aᵢₖ − Σᵣ&lt;ₖ lᵢᵣuᵣₖ)/uₖₖ（i &gt; k）</p>';
+
+      for (s = 0; s < out.steps.length; s++) {
+        var st = out.steps[s];
+        html += '<p class="step-line"><b>第 ' + (st.k + 1) + ' 步</b> 计算 U 的第 ' + (st.k + 1) +
+          " 行与 L 的第 " + (st.k + 1) + " 列</p>";
+        html += '<p class="step-formula">' + st.uNotes.join("；") + "</p>";
+
+        if (st.lNotes.length) {
+          html += '<p class="step-formula">' + st.lNotes.join("；") + "</p>";
+        }
+      }
+
+      html += '<p class="step-line"><b>分解结果</b> L（单位下三角）与 U（上三角）：</p>';
+      html += matrixHtml(out.L, null, null);
+      html += matrixHtml(out.U, null, null);
+
+      html += '<p class="step-line"><b>解 Ly = b（前代）</b></p>';
+      for (i = 0; i < out.ySteps.length; i++) {
+        var ys = out.ySteps[i];
+        html += '<p class="step-formula">y' + sub(ys.i + 1) + " = " + fmtNum(ys.rhs) + ys.terms.join("") +
+          " = " + fmtNum(ys.value) + "</p>";
+      }
+
+      html += '<p class="step-line"><b>解 Ux = y（回代）</b></p>';
+      for (i = 0; i < out.back.length; i++) {
+        var bs = out.back[i];
+        html += '<p class="step-formula">x' + sub(bs.i + 1) + " = (" + fmtNum(bs.rhs) + bs.terms.join("") +
+          ") / " + numParen(bs.diag) + " = " + fmtNum(bs.value) + "</p>";
+      }
+
+      return html;
+    }
+
+    function diagDominanceInfo(A) {
+      var allWeak = true, strictlyOneRow = false;
+
+      for (var i = 0; i < A.length; i++) {
+        var sum = 0;
+        for (var j = 0; j < A.length; j++) if (j !== i) sum += Math.abs(A[i][j]);
+
+        var d = Math.abs(A[i][i]);
+        if (d < sum - 1e-12) allWeak = false;
+        if (d > sum + 1e-12) strictlyOneRow = true;
+      }
+
+      if (allWeak && strictlyOneRow) {
+        return "矩阵严格对角占优，雅可比与高斯-赛德尔迭代都收敛。";
+      }
+      if (allWeak) {
+        return "矩阵弱对角占优，迭代通常收敛，但本页不保证。";
+      }
+      return "矩阵不满足对角占优，迭代可能发散；可观察误差是否变小。";
+    }
+
+    function iterStepsHtml(out, tol, maxIter) {
+      var isGS = currentMethod === 5;
+      var html = "";
+
+      html += '<p class="step-formula">' + (isGS
+        ? "高斯-赛德尔：xᵢ⁽ᵏ⁺¹⁾ = (bᵢ − Σⱼ&lt;ᵢ aᵢⱼxⱼ⁽ᵏ⁺¹⁾ − Σⱼ&gt;ᵢ aᵢⱼxⱼ⁽ᵏ⁾) / aᵢᵢ，刚算出的新分量立即参与计算"
+        : "雅可比：xᵢ⁽ᵏ⁺¹⁾ = (bᵢ − Σⱼ≠ᵢ aᵢⱼxⱼ⁽ᵏ⁾) / aᵢᵢ，右端全部使用上一轮的旧值") + "</p>";
+
+      html += '<p class="step-line"><b>收敛性</b> ' + diagDominanceInfo(out.A) + "</p>";
+      html += '<p class="step-line"><b>初值</b> x⁽⁰⁾ = (' + vectorText(out.x0) +
+        ")；<b>停止条件</b> " + (out.reason === "tol" ? "‖Δx‖∞ ≤ tol = " + fmtNum(tol) : "跑满 " + maxIter + " 次") + "</p>";
+
+      html += '<div class="step-table-wrap"><table class="step-table"><thead><tr><th>k</th>';
+      for (var j = 0; j < matrixSize; j++) html += "<th>x" + sub(j + 1) + "</th>";
+      html += "<th>‖Δx‖∞</th></tr></thead><tbody>";
+
+      var idx = pickRows(out.history, 8, 5);
+      for (var i = 0; i < idx.length; i++) {
+        if (idx[i] < 0) {
+          html += '<tr class="ellipsis"><td colspan="' + (matrixSize + 2) + '">⋯⋯</td></tr>';
+          continue;
+        }
+
+        var rec = out.history[idx[i]];
+        html += "<tr><td>" + rec.k + "</td>";
+        for (j = 0; j < matrixSize; j++) html += "<td>" + fmtNum(rec.x[j]) + "</td>";
+        html += "<td>" + fmtNum(rec.err) + "</td></tr>";
+      }
+
+      html += "</tbody></table></div>";
+
+      if (out.history.length > idx.length) {
+        html += '<p class="step-note">表中只列出部分迭代（共 ' + out.history.length + " 次）。</p>";
+      }
+
+      if (out.reason !== "tol") {
+        html += '<p class="step-note">未在 ' + maxIter + " 次内达到精度，结果可能还不准确。</p>";
+      }
+
+      return html;
+    }
+
+    function renderSteps(out, tol, maxIter) {
+      var card = document.getElementById("stepsCard");
+      var box = document.getElementById("steps");
+      if (!card || !box) return;
+
+      var html = "";
+      html += '<p class="step-line"><b>方法</b> ' + METHOD_INFO[currentMethod].name +
+        "；<b>规模</b> " + matrixSize + " 阶</p>";
+      html += '<p class="step-line"><b>方程组</b> ' + equationText(out.A, out.b) + "</p>";
+
+      if (currentMethod <= 2) html += gaussStepsHtml(out);
+      else if (currentMethod === 3) html += luStepsHtml(out);
+      else html += iterStepsHtml(out, tol, maxIter);
+
+      html += '<p class="step-line"><b>结果</b> x = (' + vectorText(out.x) +
+        ")，残差 ‖Ax − b‖∞ = " + fmtNum(out.residual) + "</p>";
+
+      box.innerHTML = html;
+      card.style.display = "";
+    }
+
+    /* ==========================================================
+       收敛曲线：横轴迭代次数，纵轴 log₁₀(‖Δx‖∞)
+       ========================================================== */
+
+    var chartData = { points: [], tol: null };
+
+    function chartCssVar(name, fallback) {
+      var value = getComputedStyle(document.body).getPropertyValue(name);
+      return (value && value.trim()) || fallback;
+    }
+
+    function renderChart(out, tol) {
+      var card = document.getElementById("chartCard");
+      if (!card) return;
+
+      if (!METHOD_INFO[currentMethod].iterative) {
+        card.style.display = "none";
+        chartData.points = [];
+        chartData.tol = null;
+        return;
+      }
+
+      chartData.points = out.history.map(function (h) { return { k: h.k, err: h.err }; });
+      chartData.tol = tol;
+
+      var tip = document.getElementById("chartTip");
+      if (tip) {
+        tip.textContent = "横轴为迭代次数 k，纵轴为相邻两次的差 ‖x⁽ᵏ⁾ − x⁽ᵏ⁻¹⁾‖∞（对数刻度），虚线为精度 tol = " + fmtNum(tol) + "。";
+      }
+
+      card.style.display = "";
+      drawChart();
+    }
+
+    function drawChart() {
+      var canvas = document.getElementById("chart");
+      if (!canvas) return;
+
+      var width = canvas.clientWidth;
+      var height = canvas.clientHeight;
+      if (!width || !height) return;
+
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      if (canvas.width !== Math.round(width * dpr) || canvas.height !== Math.round(height * dpr)) {
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+      }
+
+      var ctx = canvas.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+
+      var accent = chartCssVar("--accent", "#0369a1");
+      var accent2 = chartCssVar("--accent-2", "#a855f7");
+      var accentInk = chartCssVar("--accent-ink", "#075985");
+      var gridColor = chartCssVar("--line", "#e6e9f6");
+      var muted = chartCssVar("--muted", "#6c7496");
+
+      var pts = chartData.points;
+      var tol = chartData.tol;
+
+      if (!pts.length || !(tol > 0)) {
+        ctx.font = "13px 'PingFang SC','Microsoft YaHei',system-ui,sans-serif";
+        ctx.fillStyle = muted;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("迭代法求解后显示误差变化", width / 2, height / 2);
+        return;
+      }
+
+      var left = 46, right = 12, top = 14, bottom = 26;
+      var plotW = Math.max(10, width - left - right);
+      var plotH = Math.max(10, height - top - bottom);
+
+      var maxK = pts[pts.length - 1].k || 1;
+      var logs = [];
+      var i;
+      for (i = 0; i < pts.length; i++) {
+        logs.push(Math.log(pts[i].err > 0 ? pts[i].err : 1e-18) / Math.LN10);
+      }
+
+      var tolLog = Math.log(tol) / Math.LN10;
+      var minY = Math.min.apply(null, logs.concat([tolLog]));
+      var maxY = Math.max.apply(null, logs.concat([tolLog]));
+
+      if (!(maxY > minY)) { minY -= 1; maxY += 1; }
+      var padY = Math.max(0.3, (maxY - minY) * 0.12);
+      var y0 = minY - padY;
+      var y1 = maxY + padY;
+
+      function toPx(k) { return left + (k / Math.max(1, maxK)) * plotW; }
+      function toPy(v) { return top + (y1 - v) / (y1 - y0) * plotH; }
+
+      // —— 网格与纵轴刻度（按 10 的整数次幂） ——
+      ctx.font = "11px 'PingFang SC','Microsoft YaHei',system-ui,sans-serif";
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = gridColor;
+
+      var e;
+      for (e = Math.ceil(y0); e <= Math.floor(y1); e++) {
+        var py = toPy(e);
+        ctx.beginPath();
+        ctx.moveTo(left, py);
+        ctx.lineTo(left + plotW, py);
+        ctx.stroke();
+
+        ctx.fillStyle = muted;
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        ctx.fillText(expLabel(e), left - 8, py);
+      }
+
+      // —— 横轴刻度 ——
+      var stepK = Math.max(1, Math.ceil(maxK / Math.max(2, Math.floor(plotW / 60))));
+      ctx.strokeStyle = gridColor;
+      for (var k = 0; k <= maxK; k += stepK) {
+        var px = toPx(k);
+        ctx.beginPath();
+        ctx.moveTo(px, top);
+        ctx.lineTo(px, top + plotH);
+        ctx.stroke();
+
+        ctx.fillStyle = muted;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillText(String(k), px, top + plotH + 16);
+      }
+
+      // —— 坐标轴 ——
+      ctx.strokeStyle = "rgba(23, 28, 52, 0.35)";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(left, top);
+      ctx.lineTo(left, top + plotH);
+      ctx.lineTo(left + plotW, top + plotH);
+      ctx.stroke();
+
+      // —— 精度线 ——
+      ctx.save();
+      ctx.strokeStyle = accent2;
+      ctx.globalAlpha = 0.8;
+      ctx.lineWidth = 1.4;
+      if (typeof ctx.setLineDash === "function") ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(left, toPy(tolLog));
+      ctx.lineTo(left + plotW, toPy(tolLog));
+      ctx.stroke();
+      ctx.restore();
+
+      // —— 误差折线 ——
+      var gradient = ctx.createLinearGradient(left, top, left + plotW, top + plotH);
+      gradient.addColorStop(0, accent);
+      gradient.addColorStop(1, accent2);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(left, top, plotW, plotH);
+      ctx.clip();
+
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = 2.2;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.beginPath();
+
+      for (i = 0; i < pts.length; i++) {
+        var x = toPx(pts[i].k);
+        var y = toPy(logs[i]);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      // —— 数据点 ——
+      for (i = 0; i < pts.length; i++) {
+        var px2 = toPx(pts[i].k);
+        var py2 = toPy(logs[i]);
+
+        ctx.beginPath();
+        ctx.arc(px2, py2, 3, 0, Math.PI * 2);
+        ctx.fillStyle = "#fff";
+        ctx.fill();
+        ctx.lineWidth = 1.8;
+        ctx.strokeStyle = accent;
+        ctx.stroke();
+      }
+
+      // —— 说明文字 ——
+      ctx.font = "600 11px 'PingFang SC','Microsoft YaHei',system-ui,sans-serif";
+      ctx.fillStyle = accentInk;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "alphabetic";
+      ctx.fillText("‖Δx‖∞", 4, top + 8);
+    }
+
+    /* ---------- 初始化 ---------- */
+
+    renderMatrix({
+      a: [["10", "-1", "2"], ["-1", "10", "-1"], ["2", "-2", "10"]],
+      b: ["14", "16", "28"]
+    });
+    selectMethod(1);
+
+    document.addEventListener("DOMContentLoaded", function () {
+      ElementId = "a0_0";
+      syncEcho();
+
+      var resizeTimer = null;
+      window.addEventListener("resize", function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(drawChart, 120);
+      });
+    });
+  </script>
+</body>
+
+</html>
