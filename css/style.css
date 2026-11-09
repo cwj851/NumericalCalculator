@@ -414,6 +414,10 @@ body::before {
   box-shadow: 0 10px 20px -12px var(--accent);
 }
 
+/* 表单内嵌的小号选项条（如非线性方程的停止条件） */
+.tabs-compact { margin: 8px 0 0; gap: 6px; }
+.tabs-compact .tab { padding: 6px 12px; font-size: 12.5px; }
+
 /* 手机竖屏：收紧间距，六种方法尽量排成一行 */
 @media (max-width: 440px) {
   .tabs { gap: 4px; }
@@ -560,6 +564,7 @@ body::before {
 .c-diff { --c1: #8b5cf6; --c2: #ec4899; }
 .c-int { --c1: #f43f5e; --c2: #fb923c; }
 .c-numint { --c1: #0d9488; --c2: #38bdf8; }
+.c-nonlin { --c1: #16a34a; --c2: #a3e635; }
 
 .page-foot {
   margin-top: 26px;
