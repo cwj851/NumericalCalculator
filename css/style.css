@@ -47,6 +47,8 @@ body.theme-interp { --accent: #7c3aed; --accent-2: #0ea5e9; --accent-soft: #f3ec
                     --glow-1: rgba(124, 58, 237, 0.18); --glow-2: rgba(14, 165, 233, 0.18); --glow-3: rgba(168, 85, 247, 0.14); }
 body.theme-linsys { --accent: #0369a1; --accent-2: #a855f7; --accent-soft: #e8f2fd; --accent-ink: #075985;
                     --glow-1: rgba(3, 105, 161, 0.18); --glow-2: rgba(168, 85, 247, 0.18); --glow-3: rgba(56, 189, 248, 0.14); }
+body.theme-ode { --accent: #0e7490; --accent-2: #f59e0b; --accent-soft: #e6f6fb; --accent-ink: #155e75;
+                 --glow-1: rgba(14, 116, 144, 0.18); --glow-2: rgba(245, 158, 11, 0.18); --glow-3: rgba(56, 189, 248, 0.14); }
 
 html, body { margin: 0; }
 
@@ -615,7 +617,7 @@ body::before {
 
 .hero p {
   margin: 12px 0 0;
-  max-width: 660px;
+  max-width: 760px;
   font-size: 14.5px;
   line-height: 1.85;
   color: var(--muted);
@@ -717,6 +719,7 @@ body::before {
 .c-nonlin { --c1: #16a34a; --c2: #a3e635; }
 .c-interp { --c1: #7c3aed; --c2: #0ea5e9; }
 .c-linsys { --c1: #0369a1; --c2: #a855f7; }
+.c-ode { --c1: #0e7490; --c2: #f59e0b; }
 
 .page-foot {
   margin-top: 26px;

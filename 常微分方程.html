@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>常微分方程 · 数值计算器</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body class="theme-ode">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="back-btn" href="index.html">← 首页</a>
+      <div class="titles">
+        <h1>常微分方程初值问题</h1>
+        <p>显式欧拉 · 隐式欧拉 · 改进欧拉 · 龙格-库塔</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <nav class="tabs" role="tablist" aria-label="常微分方程数值方法">
+      <button type="button" class="tab active" role="tab" data-method="1" onclick="selectMethod(1)">显式欧拉</button>
+      <button type="button" class="tab" role="tab" data-method="2" onclick="selectMethod(2)">隐式欧拉</button>
+      <button type="button" class="tab" role="tab" data-method="3" onclick="selectMethod(3)">改进欧拉</button>
+      <button type="button" class="tab" role="tab" data-method="4" onclick="selectMethod(4)">龙格-库塔</button>
+    </nav>
+
+    <div class="workspace">
+
+      <div class="stack">
+
+        <section class="card">
+          <h2 class="card-title">方程与参数</h2>
+
+          <label class="field">
+            <span>右端函数 f(x, y)（求 y′ = f(x, y)）</span>
+            <input type="text" id="equation" placeholder="例如 x + y、-2*y、y - 2*x/y" data-enter="runOde" />
+          </label>
+
+          <div class="field-grid">
+            <label class="field">
+              <span>起点 x₀</span>
+              <input type="text" id="x0Value" value="0" placeholder="例如 0" data-enter="runOde" />
+            </label>
+            <label class="field">
+              <span>终点 xₙ</span>
+              <input type="text" id="xnValue" value="1" placeholder="例如 1" data-enter="runOde" />
+            </label>
+          </div>
+
+          <div class="field-grid">
+            <label class="field">
+              <span>初值 y(x₀)</span>
+              <input type="text" id="y0Value" value="1" placeholder="例如 1" data-enter="runOde" />
+            </label>
+            <label class="field">
+              <span>步数 n</span>
+              <input type="text" id="steps" value="10" placeholder="例如 10" data-enter="runOde" />
+            </label>
+          </div>
+
+          <label class="field">
+            <span>精确解 y(x)（可选，用于误差对比）</span>
+            <input type="text" id="exactSolution" placeholder="例如 2*e^x - x - 1" data-enter="runOde" />
+          </label>
+
+          <p class="algo-hint" id="methodHint"></p>
+
+          <div class="actions">
+            <button type="button" class="btn btn-primary" onclick="runOde()">计 算</button>
+            <button type="button" class="btn btn-ghost" onclick="clearInputs()">清 除</button>
+          </div>
+
+          <div class="examples">
+            <p>快速示例（已填精确解）</p>
+            <div class="example-row">
+              <button type="button" class="example" onclick="useExample(0)">y′ = x + y</button>
+              <button type="button" class="example" onclick="useExample(1)">y′ = −y</button>
+              <button type="button" class="example" onclick="useExample(2)">y′ = y − 2x/y</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2 class="card-title">结果</h2>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="copyResult('result')">复制结果</button>
+          </div>
+          <p id="result" class="result" data-empty="填好方程、区间与初值后点击“计算”"></p>
+        </section>
+
+        <section class="card" id="stepsCard" style="display:none">
+          <div class="card-head">
+            <h2 class="card-title">计算过程</h2>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="copySteps()">复制过程</button>
+          </div>
+          <div class="steps" id="stepsBody"></div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2 class="card-title">解曲线</h2>
+          </div>
+          <div class="chart-box">
+            <canvas id="chart" class="chart" role="img" aria-label="数值解与精确解曲线"></canvas>
+          </div>
+          <p class="chart-tip" id="chartTip">计算后这里画出数值解的折线；填了精确解时还会画出对比曲线。</p>
+        </section>
+
+      </div>
+
+      <aside class="card side">
+        <h2 class="card-title">输入面板</h2>
+        <p class="card-note">符号插入到光标所在的输入框；自变量用 x，未知函数用 y。</p>
+
+        <div class="chips">
+          <button type="button" class="chip chip-key" onclick="insertSymbol('x')">x</button>
+          <button type="button" class="chip chip-key" onclick="insertSymbol('y')">y</button>
+          <button type="button" class="chip" onclick="insertSymbol('^')">x<sup>y</sup></button>
+          <button type="button" class="chip" onclick="insertSymbol('(')">(</button>
+          <button type="button" class="chip" onclick="insertSymbol(')')">)</button>
+          <button type="button" class="chip" onclick="insertSymbol('sqrt()')">√</button>
+          <button type="button" class="chip" onclick="insertSymbol('pi')">π</button>
+          <button type="button" class="chip" onclick="insertSymbol('e')">e</button>
+          <button type="button" class="chip" onclick="insertSymbol('sin()')">sin</button>
+          <button type="button" class="chip" onclick="insertSymbol('cos()')">cos</button>
+          <button type="button" class="chip" onclick="insertSymbol('ln()')">ln</button>
+          <button type="button" class="chip" onclick="insertSymbol('exp()')">exp</button>
+        </div>
+
+        <div class="keypad">
+          <button type="button" class="key" onclick="insertSymbol('7')">7</button>
+          <button type="button" class="key" onclick="insertSymbol('8')">8</button>
+          <button type="button" class="key" onclick="insertSymbol('9')">9</button>
+          <button type="button" class="key back" onclick="backspace()">⌫</button>
+
+          <button type="button" class="key" onclick="insertSymbol('4')">4</button>
+          <button type="button" class="key" onclick="insertSymbol('5')">5</button>
+          <button type="button" class="key" onclick="insertSymbol('6')">6</button>
+          <button type="button" class="key op" onclick="insertSymbol('/')">÷</button>
+
+          <button type="button" class="key" onclick="insertSymbol('1')">1</button>
+          <button type="button" class="key" onclick="insertSymbol('2')">2</button>
+          <button type="button" class="key" onclick="insertSymbol('3')">3</button>
+          <button type="button" class="key op" onclick="insertSymbol('*')">×</button>
+
+          <button type="button" class="key" onclick="insertSymbol('0')">0</button>
+          <button type="button" class="key" onclick="insertSymbol('.')">.</button>
+          <button type="button" class="key op" onclick="insertSymbol('-')">−</button>
+          <button type="button" class="key op" onclick="insertSymbol('+')">+</button>
+        </div>
+      </aside>
+
+    </div>
+  </main>
+
+  <div id="toast" class="toast">已复制</div>
+
+  <script src="js/expr.js"></script>
+  <script src="js/nerdamer.core.js"></script>
+  <script src="js/Algebra.js"></script>
+  <script src="js/Calculus.js"></script>
+  <script src="js/Solve.js"></script>
+  <script src="js/ui.js"></script>
+
+  <script>
+    /* ==========================================================
+       常微分方程初值问题：显式欧拉 / 隐式欧拉 / 改进欧拉 / RK4
+       ========================================================== */
+
+    var currentMethod = 1;
+
+    var METHOD_INFO = {
+      1: {
+        name: "显式欧拉法",
+        order: "一阶",
+        formula: "yᵢ₊₁ = yᵢ + h·f(xᵢ, yᵢ)，直接用左端点 (xᵢ, yᵢ) 的斜率走完整步",
+        hint: "显式欧拉法：用 yᵢ₊₁ = yᵢ + h·f(xᵢ, yᵢ) 逐步推进，公式最简单但只有一阶精度；h 偏大时误差会迅速累积。"
+      },
+      2: {
+        name: "隐式欧拉法",
+        order: "一阶",
+        formula: "yᵢ₊₁ = yᵢ + h·f(xᵢ₊₁, yᵢ₊₁)，右端含未知的 yᵢ₊₁，需迭代求解",
+        hint: "隐式欧拉法：用右端点斜率 yᵢ₊₁ = yᵢ + h·f(xᵢ₊₁, yᵢ₊₁)，方程两端都含 yᵢ₊₁，本页先用显式欧拉预估，再不动点迭代到收敛。稳定性好，适合刚性方程。"
+      },
+      3: {
+        name: "改进欧拉法",
+        order: "二阶",
+        formula: "先预测 ȳᵢ₊₁ = yᵢ + h·f(xᵢ, yᵢ)，再校正 yᵢ₊₁ = yᵢ + h·[f(xᵢ, yᵢ) + f(xᵢ₊₁, ȳᵢ₊₁)]/2",
+        hint: "改进欧拉法（预测-校正 / Heun）：先用显式欧拉预测一个 ȳᵢ₊₁，再用两端点斜率的平均值校正，二阶精度，计算量约为显式欧拉的两倍。"
+      },
+      4: {
+        name: "龙格-库塔法",
+        order: "四阶",
+        formula: "k₁ = f(xᵢ, yᵢ)，k₂ = f(xᵢ + h/2, yᵢ + h·k₁/2)，k₃ = f(xᵢ + h/2, yᵢ + h·k₂/2)，k₄ = f(xᵢ + h, yᵢ + h·k₃)，yᵢ₊₁ = yᵢ + h(k₁ + 2k₂ + 2k₃ + k₄)/6",
+        hint: "经典四阶龙格-库塔（RK4）：每步在区间内取 4 个斜率加权平均，局部误差 O(h⁵)，是通用性最好的定步长方法。"
+      }
+    };
+
+    var EXAMPLES = [
+      {
+        equation: "x + y",
+        x0: "0", xn: "1", y0: "1", steps: "10",
+        exact: "2*e^x - x - 1"
+      },
+      {
+        equation: "-y",
+        x0: "0", xn: "2", y0: "1", steps: "10",
+        exact: "e^(-x)"
+      },
+      {
+        equation: "y - 2*x/y",
+        x0: "0", xn: "1", y0: "1", steps: "5",
+        exact: "sqrt(1 + 2*x)"
+      }
+    ];
+
+    /* ---------- 基础工具 ---------- */
+
+    var SUB_MAP = { "0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄", "5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉" };
+
+    function sub(n) {
+      return String(n).split("").map(function (ch) { return SUB_MAP[ch] || ch; }).join("");
+    }
+
+    function fmtNum(v) {
+      if (typeof v !== "number" || !isFinite(v)) return "—";
+      if (v === 0) return "0";
+      var abs = Math.abs(v);
+      if (abs >= 1e6 || abs < 1e-6) return v.toExponential(4);
+      return String(Number(v.toPrecision(8)));
+    }
+
+    function escapeText(text) {
+      return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function numParen(v) {
+      return v < 0 ? "(" + fmtNum(v) + ")" : fmtNum(v);
+    }
+
+    function pickRows(list, head, tail) {
+      if (list.length <= head + tail) return list.map(function (v, i) { return i; });
+      var idx = [];
+      for (var i = 0; i < head; i++) idx.push(i);
+      idx.push(-1);
+      for (var j = list.length - tail; j < list.length; j++) idx.push(j);
+      return idx;
+    }
+
+    function readNumber(id) {
+      var el = document.getElementById(id);
+      if (!el) return NaN;
+      var parsed = parseCellValue(el.value);
+      if (parsed.empty) return NaN;
+      if (parsed.error) return NaN;
+      return parsed.value;
+    }
+
+    /* ---------- 表达式预处理（与其它页面一致） ---------- */
+
+    function myParse(expression) {
+      theString = stripSpaces(expression);
+      with (Math) {
+        theString = replaceSubstring(theString, ")(", ")*(");
+        theString = replaceSubstring(theString, ")ln", ")*ln");
+        theString = replaceSubstring(theString, ")log", ")*log");
+        theString = replaceSubstring(theString, ")sin", ")*sin");
+        theString = replaceSubstring(theString, ")cos", ")*cos");
+        theString = replaceSubstring(theString, ")e", ")*e");
+
+        theString = replaceSubstring(theString, "log10", "log");
+
+        theString = putProduct(theString);
+        theString = replaceSubstring(theString, "log", "(1/log(10))*log");
+        theString = replaceSubstring(theString, "ln", "log");
+        theString = replaceChar(theString, "X", "x");
+        theString = replaceChar(theString, "Y", "y");
+      } // with Math
+      return (theString);
+    }
+
+    function replaceChar(InString, oldSymbol, newSymbol) {
+      OutString = "";
+      for (Count = 0; Count < InString.length; Count++) {
+        TempChar = InString.substring(Count, Count + 1);
+        if (TempChar != oldSymbol)
+          OutString = OutString + TempChar
+        else OutString = OutString + newSymbol;
+      }
+      return (OutString);
+    }
+
+    function replaceSubstring(InString, oldSubstring, newSubstring) {
+      OutString = "";
+      var sublength = oldSubstring.length;
+      for (Count = 0; Count < InString.length; Count++) {
+        TempStr = InString.substring(Count, Count + sublength);
+        TempChar = InString.substring(Count, Count + 1);
+        if (TempStr != oldSubstring)
+          OutString = OutString + TempChar
+        else {
+          OutString = OutString + newSubstring;
+          Count += sublength - 1
+        }
+      }
+      return (OutString);
+    }
+
+    function isNumberChar(InString) {
+      if (InString.length != 1)
+        return (false);
+      RefString = "1234567890)";
+      if (RefString.indexOf(InString, 0) == -1)
+        return (false);
+      return (true);
+    }
+
+    function isCharHere(InString, RefString) {
+      if (InString.length != 1)
+        return (false);
+      if (RefString.indexOf(InString, 0) == -1)
+        return (false);
+      return (true);
+    }
+
+    function putProduct(InString) {
+      OutString = "";
+      for (Count = 0; Count < InString.length; Count++) {
+        TempChar = InString.substring(Count, Count + 1);
+        if (!isCharHere(TempChar, "xXyYeslcapdDuU(") || (Count == 0)) { OutString = OutString + TempChar }
+        else {
+          if (isNumberChar(InString.substring(Count - 1, Count))) { OutString = OutString + "*" + TempChar }
+          else OutString = OutString + TempChar
+        }
+      }
+      return (OutString);
+    }
+
+    function stripSpaces(InString) {
+      var OutString = "";
+      for (Count = 0; Count < InString.length; Count++) {
+        var TempChar = InString.substring(Count, Count + 1);
+        if (TempChar != " ")
+          OutString = OutString + TempChar;
+      }
+      return (OutString);
+    }
+
+    /* ---------- 页面交互 ---------- */
+
+    function selectMethod(num) {
+      currentMethod = num;
+
+      var tabs = document.querySelectorAll(".tabs .tab[data-method]");
+      for (var i = 0; i < tabs.length; i++) {
+        var active = tabs[i].getAttribute("data-method") == String(num);
+        tabs[i].className = active ? "tab active" : "tab";
+        tabs[i].setAttribute("aria-selected", active ? "true" : "false");
+      }
+
+      document.getElementById("methodHint").innerHTML = METHOD_INFO[num].hint;
+      clearOutput();
+    }
+
+    function useExample(index) {
+      var item = EXAMPLES[index];
+      if (!item) return;
+
+      document.getElementById("equation").value = item.equation;
+      document.getElementById("x0Value").value = item.x0;
+      document.getElementById("xnValue").value = item.xn;
+      document.getElementById("y0Value").value = item.y0;
+      document.getElementById("steps").value = item.steps;
+      document.getElementById("exactSolution").value = item.exact;
+
+      runOde();
+    }
+
+    function clearInputs() {
+      clearFields(["equation", "x0Value", "xnValue", "y0Value", "steps", "exactSolution"]);
+      clearOutput();
+    }
+
+    function clearOutput() {
+      document.getElementById("result").innerHTML = "";
+      document.getElementById("stepsBody").innerHTML = "";
+      document.getElementById("stepsCard").style.display = "none";
+      chartData.points = [];
+      chartData.exact = null;
+      drawChart();
+      var tip = document.getElementById("chartTip");
+      if (tip) tip.textContent = "计算后这里画出数值解的折线；填了精确解时还会画出对比曲线。";
+    }
+
+    function showError(message) {
+      document.getElementById("result").innerHTML = message;
+      document.getElementById("stepsBody").innerHTML = "";
+      document.getElementById("stepsCard").style.display = "none";
+      chartData.points = [];
+      chartData.exact = null;
+      drawChart();
+    }
+
+    function copySteps() {
+      var card = document.getElementById("stepsCard");
+      var box = document.getElementById("stepsBody");
+      if (!card || card.style.display === "none" || !box || !box.textContent.trim()) {
+        showToast("还没有可复制的过程");
+        return;
+      }
+      copyText(box.innerText || box.textContent);
+    }
+
+    /* ---------- 求解入口 ---------- */
+
+    function safeF(f, x, y) {
+      try {
+        var value = f(x, y);
+        if (typeof value !== "number" || !isFinite(value) || Math.abs(value) > 1e12) return NaN;
+        return value;
+      } catch (e) {
+        return NaN;
+      }
+    }
+
+    function runOde() {
+      var text = document.getElementById("equation").value;
+      if (stripSpaces(text) === "") { showError("请输入右端函数 f(x, y)。"); return; }
+
+      var f;
+      try {
+        f = nerdamer(myParse(text)).buildFunction(["x", "y"]);
+      } catch (e) {
+        showError("f(x, y) 无法解析：请检查写法（自变量用 x，未知函数用 y）。");
+        return;
+      }
+
+      var x0 = readNumber("x0Value");
+      var xn = readNumber("xnValue");
+      var y0 = readNumber("y0Value");
+      var n = readNumber("steps");
+
+      if (isNaN(x0) || isNaN(xn)) { showError("请填写区间端点 x₀ 与 xₙ。"); return; }
+      if (!(xn > x0)) { showError("区间必须满足 xₙ > x₀。"); return; }
+      if (isNaN(y0)) { showError("请填写初值 y(x₀)。"); return; }
+      if (!(n >= 1) || Math.floor(n) !== n) { showError("步数 n 必须是正整数。"); return; }
+      if (n > 200) { showError("步数最多 200，再多请分段计算。"); return; }
+
+      var exactText = stripSpaces(document.getElementById("exactSolution").value);
+      var exact = null;
+      if (exactText !== "") {
+        try {
+          exact = nerdamer(myParse(exactText)).buildFunction(["x"]);
+        } catch (e) {
+          showError("精确解无法解析：请检查写法（自变量用 x）。");
+          return;
+        }
+      }
+
+      var h = (xn - x0) / n;
+      var out;
+
+      if (currentMethod === 1) out = eulerExplicit(f, x0, y0, h, n);
+      else if (currentMethod === 2) out = eulerImplicit(f, x0, y0, h, n);
+      else if (currentMethod === 3) out = eulerImproved(f, x0, y0, h, n);
+      else out = rungeKutta4(f, x0, y0, h, n);
+
+      if (out.error) { showError(out.error); return; }
+
+      out.x0 = x0;
+      out.xn = xn;
+      out.y0 = y0;
+      out.h = h;
+      out.n = n;
+      out.exact = exact;
+
+      renderResult(out);
+      renderSteps(out);
+      renderChart(out);
+    }
+
+    /* ---------- 四种方法 ---------- */
+
+    function eulerExplicit(f, x0, y0, h, n) {
+      var points = [{ x: x0, y: y0 }];
+      var details = [];
+      var x = x0, y = y0;
+
+      for (var i = 0; i < n; i++) {
+        var k1 = safeF(f, x, y);
+        if (!isFinite(k1)) {
+          return { error: "第 " + (i + 1) + " 步 f(x, y) 无法计算，请检查函数表达式与定义域。" };
+        }
+
+        var yn = y + h * k1;
+        details.push({ i: i, x: x, y: y, xn: x + h, yn: yn, k1: k1 });
+
+        x = x + h;
+        y = yn;
+        points.push({ x: x, y: y });
+      }
+
+      return { points: points, details: details };
+    }
+
+    function eulerImplicit(f, x0, y0, h, n) {
+      var points = [{ x: x0, y: y0 }];
+      var details = [];
+      var x = x0, y = y0;
+
+      for (var i = 0; i < n; i++) {
+        var f0 = safeF(f, x, y);
+        if (!isFinite(f0)) {
+          return { error: "第 " + (i + 1) + " 步 f(x, y) 无法计算，请检查函数表达式与定义域。" };
+        }
+
+        var xNext = x + h;
+        var predictor = y + h * f0;
+        var guess = predictor;
+        var iterations = 0;
+        var delta = Infinity;
+        var converged = false;
+
+        for (iterations = 1; iterations <= 200; iterations++) {
+          var fNext = safeF(f, xNext, guess);
+          if (!isFinite(fNext)) {
+            return { error: "隐式欧拉在第 " + (i + 1) + " 步迭代时 f 无法计算，请检查函数。" };
+          }
+
+          var next = y + h * fNext;
+          delta = Math.abs(next - guess);
+          guess = next;
+
+          if (delta <= 1e-12) { converged = true; break; }
+        }
+
+        if (!converged) {
+          return {
+            error: "隐式欧拉在第 " + (i + 1) + " 步的隐式方程迭代不收敛（|Δ| = " + fmtNum(delta) +
+              "）。可减小步长（加大步数）或改用其他方法。"
+          };
+        }
+
+        details.push({
+          i: i, x: x, y: y, xn: xNext, yn: guess,
+          f0: f0, predictor: predictor, iterations: iterations, delta: delta
+        });
+
+        x = xNext;
+        y = guess;
+        points.push({ x: x, y: y });
+      }
+
+      return { points: points, details: details };
+    }
+
+    function eulerImproved(f, x0, y0, h, n) {
+      var points = [{ x: x0, y: y0 }];
+      var details = [];
+      var x = x0, y = y0;
+
+      for (var i = 0; i < n; i++) {
+        var k1 = safeF(f, x, y);
+        if (!isFinite(k1)) {
+          return { error: "第 " + (i + 1) + " 步 f(x, y) 无法计算，请检查函数表达式与定义域。" };
+        }
+
+        var predictor = y + h * k1;
+        var k2 = safeF(f, x + h, predictor);
+        if (!isFinite(k2)) {
+          return { error: "第 " + (i + 1) + " 步的预测值处 f 无法计算，请检查函数。" };
+        }
+
+        var yn = y + h * (k1 + k2) / 2;
+        details.push({ i: i, x: x, y: y, xn: x + h, yn: yn, k1: k1, k2: k2, predictor: predictor });
+
+        x = x + h;
+        y = yn;
+        points.push({ x: x, y: y });
+      }
+
+      return { points: points, details: details };
+    }
+
+    function rungeKutta4(f, x0, y0, h, n) {
+      var points = [{ x: x0, y: y0 }];
+      var details = [];
+      var x = x0, y = y0;
+
+      for (var i = 0; i < n; i++) {
+        var k1 = safeF(f, x, y);
+        var k2 = safeF(f, x + h / 2, y + h * k1 / 2);
+        var k3 = safeF(f, x + h / 2, y + h * k2 / 2);
+        var k4 = safeF(f, x + h, y + h * k3);
+
+        if (!isFinite(k1) || !isFinite(k2) || !isFinite(k3) || !isFinite(k4)) {
+          return { error: "第 " + (i + 1) + " 步的某个 k 无法计算，请检查函数表达式与定义域。" };
+        }
+
+        var yn = y + h * (k1 + 2 * k2 + 2 * k3 + k4) / 6;
+        details.push({ i: i, x: x, y: y, xn: x + h, yn: yn, k1: k1, k2: k2, k3: k3, k4: k4 });
+
+        x = x + h;
+        y = yn;
+        points.push({ x: x, y: y });
+      }
+
+      return { points: points, details: details };
+    }
+
+    /* ---------- 结果 ---------- */
+
+    function exactAt(out, x) {
+      if (!out.exact) return NaN;
+      try {
+        var value = out.exact(x);
+        if (typeof value !== "number" || !isFinite(value)) return NaN;
+        return value;
+      } catch (e) {
+        return NaN;
+      }
+    }
+
+    function renderResult(out) {
+      var last = out.points[out.points.length - 1];
+      var html = "y(" + fmtNum(last.x) + ") ≈ " + fmtNum(last.y) + "<br>";
+      html += "步数 n = " + out.n + "，步长 h = " + fmtNum(out.h) + " · " +
+        METHOD_INFO[currentMethod].name + "（" + METHOD_INFO[currentMethod].order + "）";
+
+      var exactLast = exactAt(out, last.x);
+      if (isFinite(exactLast)) {
+        html += "<br>精确解 y(" + fmtNum(last.x) + ") = " + fmtNum(exactLast) +
+          "，误差 = " + fmtNum(last.y - exactLast);
+      }
+
+      document.getElementById("result").innerHTML = html;
+    }
+
+    /* ---------- 过程 ---------- */
+
+    function detailBlock(out, index) {
+      var d = out.details[index];
+      var html = "";
+      var i = d.i;
+
+      html += '<p class="step-line"><b>第 ' + (i + 1) + " 步</b> x" + sub(i) + " = " + fmtNum(d.x) +
+        "，y" + sub(i) + " = " + fmtNum(d.y) + "</p>";
+
+      if (currentMethod === 1) {
+        html += '<p class="step-formula">y' + sub(i + 1) + " = y" + sub(i) + " + h·f(x" + sub(i) + ", y" + sub(i) +
+          ") = " + fmtNum(d.y) + " + " + fmtNum(out.h) + "×" + numParen(d.k1) + " = " + fmtNum(d.yn) + "</p>";
+      } else if (currentMethod === 2) {
+        html += '<p class="step-formula">预估 y⁽⁰⁾ = y' + sub(i) + " + h·f(x" + sub(i) + ", y" + sub(i) + ") = " +
+          fmtNum(d.predictor) + "；迭代 y⁽ˢ⁺¹⁾ = y" + sub(i) + " + h·f(x" + sub(i + 1) + ", y⁽ˢ⁾)，共 " +
+          d.iterations + " 次收敛（|Δ| = " + fmtNum(d.delta) + "）</p>";
+        html += '<p class="step-formula">y' + sub(i + 1) + " = " + fmtNum(d.yn) + "</p>";
+      } else if (currentMethod === 3) {
+        html += '<p class="step-formula">k₁ = f(x' + sub(i) + ", y" + sub(i) + ") = " + fmtNum(d.k1) +
+          "；预测 ȳ" + sub(i + 1) + " = y" + sub(i) + " + h·k₁ = " + fmtNum(d.predictor) + "</p>";
+        html += '<p class="step-formula">k₂ = f(x' + sub(i + 1) + ", ȳ" + sub(i + 1) + ") = " + fmtNum(d.k2) + "</p>";
+        html += '<p class="step-formula">y' + sub(i + 1) + " = y" + sub(i) + " + h(k₁ + k₂)/2 = " + fmtNum(d.y) +
+          " + " + fmtNum(out.h) + "×(" + numParen(d.k1) + " + " + numParen(d.k2) + ")/2 = " + fmtNum(d.yn) + "</p>";
+      } else {
+        html += '<p class="step-formula">k₁ = f(x' + sub(i) + ", y" + sub(i) + ") = " + fmtNum(d.k1) + "</p>";
+        html += '<p class="step-formula">k₂ = f(x' + sub(i) + " + h/2, y" + sub(i) + " + h·k₁/2) = " + fmtNum(d.k2) + "</p>";
+        html += '<p class="step-formula">k₃ = f(x' + sub(i) + " + h/2, y" + sub(i) + " + h·k₂/2) = " + fmtNum(d.k3) + "</p>";
+        html += '<p class="step-formula">k₄ = f(x' + sub(i) + " + h, y" + sub(i) + " + h·k₃) = " + fmtNum(d.k4) + "</p>";
+        html += '<p class="step-formula">y' + sub(i + 1) + " = y" + sub(i) +
+          " + h(k₁ + 2k₂ + 2k₃ + k₄)/6 = " + fmtNum(d.yn) + "</p>";
+      }
+
+      return html;
+    }
+
+    function tableHtml(out) {
+      var hasExact = !!out.exact;
+      var head = "<th>i</th><th>xᵢ</th><th>yᵢ</th>";
+
+      if (currentMethod === 1 || currentMethod === 2) head += "<th>f(xᵢ, yᵢ)</th>";
+      else if (currentMethod === 3) head += "<th>k₁</th><th>k₂</th>";
+      else head += "<th>k₁</th><th>k₂</th><th>k₃</th><th>k₄</th>";
+
+      if (hasExact) head += "<th>y(xᵢ)</th><th>误差</th>";
+
+      var cols = 3 + (currentMethod === 4 ? 4 : (currentMethod === 3 ? 2 : 1)) + (hasExact ? 2 : 0);
+      var html = '<div class="step-table-wrap"><table class="step-table"><thead><tr>' + head + "</tr></thead><tbody>";
+      var idx = pickRows(out.points, 8, 5);
+
+      for (var k = 0; k < idx.length; k++) {
+        if (idx[k] < 0) {
+          html += '<tr class="ellipsis"><td colspan="' + cols + '">⋯⋯</td></tr>';
+          continue;
+        }
+
+        var pointIndex = idx[k];
+        var p = out.points[pointIndex];
+        var d = pointIndex < out.details.length ? out.details[pointIndex] : null;
+
+        html += "<tr><td>" + pointIndex + "</td><td>" + fmtNum(p.x) + "</td><td>" + fmtNum(p.y) + "</td>";
+
+        if (currentMethod === 1 || currentMethod === 2) {
+          var slope = d ? (currentMethod === 1 ? d.k1 : d.f0) : NaN;
+          html += "<td>" + (d ? fmtNum(slope) : "—") + "</td>";
+        } else if (currentMethod === 3) {
+          html += "<td>" + (d ? fmtNum(d.k1) : "—") + "</td><td>" + (d ? fmtNum(d.k2) : "—") + "</td>";
+        } else {
+          html += "<td>" + (d ? fmtNum(d.k1) : "—") + "</td><td>" + (d ? fmtNum(d.k2) : "—") + "</td>" +
+            "<td>" + (d ? fmtNum(d.k3) : "—") + "</td><td>" + (d ? fmtNum(d.k4) : "—") + "</td>";
+        }
+
+        if (hasExact) {
+          var exactValue = exactAt(out, p.x);
+          html += "<td>" + fmtNum(exactValue) + "</td><td>" + fmtNum(p.y - exactValue) + "</td>";
+        }
+
+        html += "</tr>";
+      }
+
+      html += "</tbody></table></div>";
+
+      if (out.points.length > idx.length) {
+        html += '<p class="step-note">表中只列出部分节点（共 ' + out.points.length + " 个节点）。</p>";
+      }
+
+      return html;
+    }
+
+    function renderSteps(out) {
+      var card = document.getElementById("stepsCard");
+      var box = document.getElementById("stepsBody");
+      if (!card || !box) return;
+
+      var html = "";
+      html += '<p class="step-line"><b>方程</b> y′ = ' +
+        escapeText(stripSpaces(document.getElementById("equation").value)) +
+        "，y(" + fmtNum(out.x0) + ") = " + fmtNum(out.y0) + "</p>";
+      html += '<p class="step-line"><b>区间与步长</b> [' + fmtNum(out.x0) + ", " + fmtNum(out.xn) +
+        "]，n = " + out.n + "，h = (xₙ − x₀)/n = " + fmtNum(out.h) + "</p>";
+      html += '<p class="step-line"><b>方法</b> ' + METHOD_INFO[currentMethod].name +
+        "（" + METHOD_INFO[currentMethod].order + "精度）</p>";
+      html += '<p class="step-formula">' + METHOD_INFO[currentMethod].formula + "</p>";
+
+      html += '<p class="step-line"><b>逐步计算</b></p>';
+
+      var idx = pickRows(out.details, 4, 2);
+      for (var k = 0; k < idx.length; k++) {
+        if (idx[k] < 0) {
+          html += '<p class="step-note">⋯⋯ 中间 ' + (out.details.length - 6) + " 步省略（完整数据见下表）⋯⋯</p>";
+          continue;
+        }
+        html += detailBlock(out, idx[k]);
+      }
+
+      html += '<p class="step-line"><b>节点汇总</b></p>';
+      html += tableHtml(out);
+
+      var last = out.points[out.points.length - 1];
+      var exactLast = exactAt(out, last.x);
+      var resultLine = "y(" + fmtNum(last.x) + ") ≈ " + fmtNum(last.y);
+      if (isFinite(exactLast)) {
+        resultLine += "，精确解 " + fmtNum(exactLast) + "，误差 " + fmtNum(last.y - exactLast);
+      }
+      html += '<p class="step-line"><b>结果</b> ' + resultLine + "</p>";
+
+      box.innerHTML = html;
+      card.style.display = "";
+    }
+
+    /* ==========================================================
+       解曲线：数值解折线（+ 精确解虚线）
+       ========================================================== */
+
+    var chartData = { points: [], exact: null };
+
+    function chartCssVar(name, fallback) {
+      var value = getComputedStyle(document.body).getPropertyValue(name);
+      return (value && value.trim()) || fallback;
+    }
+
+    function chartTick(value) {
+      if (value === 0) return "0";
+      var abs = Math.abs(value);
+      if (abs >= 10000 || abs < 0.001) return value.toExponential(0);
+      return String(Number(value.toPrecision(6)));
+    }
+
+    function niceStep(span, target) {
+      var raw = span / Math.max(1, target);
+      var magnitude = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10));
+      var norm = raw / magnitude;
+      var step;
+      if (norm <= 1) step = 1;
+      else if (norm <= 2) step = 2;
+      else if (norm <= 2.5) step = 2.5;
+      else if (norm <= 5) step = 5;
+      else step = 10;
+      return step * magnitude;
+    }
+
+    function chartRoundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function renderChart(out) {
+      chartData.points = out.points.slice();
+      chartData.exact = out.exact || null;
+      chartData.x0 = out.x0;
+      chartData.xn = out.xn;
+
+      var tip = document.getElementById("chartTip");
+      if (tip) {
+        tip.textContent = out.exact
+          ? "实线为" + METHOD_INFO[currentMethod].name + "的数值解，虚线为精确解 y(x)；圆点为各节点。"
+          : "实线为" + METHOD_INFO[currentMethod].name + "的数值解，圆点为各节点；填写精确解后可对比。";
+      }
+
+      drawChart();
+    }
+
+    function drawChart() {
+      var canvas = document.getElementById("chart");
+      if (!canvas) return;
+
+      var width = canvas.clientWidth;
+      var height = canvas.clientHeight;
+      if (!width || !height) return;
+
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      if (canvas.width !== Math.round(width * dpr) || canvas.height !== Math.round(height * dpr)) {
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+      }
+
+      var ctx = canvas.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+
+      var accent = chartCssVar("--accent", "#0e7490");
+      var accent2 = chartCssVar("--accent-2", "#f59e0b");
+      var accentInk = chartCssVar("--accent-ink", "#155e75");
+      var gridColor = chartCssVar("--line", "#e6e9f6");
+      var muted = chartCssVar("--muted", "#6c7496");
+
+      var pts = chartData.points;
+
+      if (!pts.length) {
+        ctx.font = "13px 'PingFang SC','Microsoft YaHei',system-ui,sans-serif";
+        ctx.fillStyle = muted;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("计算后显示数值解曲线", width / 2, height / 2);
+        return;
+      }
+
+      // —— 采样精确解 ——
+      var exactPoints = [];
+      var i;
+      if (chartData.exact) {
+        var samples = Math.max(80, Math.round(width * 0.8));
+        for (i = 0; i <= samples; i++) {
+          var sx = pts[0].x + (pts[pts.length - 1].x - pts[0].x) * i / samples;
+          var sy = NaN;
+          try {
+            var raw = chartData.exact(sx);
+            if (typeof raw === "number" && isFinite(raw)) sy = raw;
+          } catch (e) { sy = NaN; }
+          exactPoints.push({ x: sx, y: sy });
+        }
+      }
+
+      // —— 范围 ——
+      var minX = pts[0].x;
+      var maxX = pts[pts.length - 1].x;
+      if (!(maxX > minX)) maxX = minX + 1;
+
+      var ys = [];
+      for (i = 0; i < pts.length; i++) if (isFinite(pts[i].y)) ys.push(pts[i].y);
+      for (i = 0; i < exactPoints.length; i++) if (isFinite(exactPoints[i].y)) ys.push(exactPoints[i].y);
+      if (!ys.length) return;
+
+      var lo = Math.min.apply(null, ys);
+      var hi = Math.max.apply(null, ys);
+      if (!(hi - lo > 1e-12)) { lo -= 1; hi += 1; }
+      var padY = (hi - lo) * 0.14;
+      var vy0 = lo - padY;
+      var vy1 = hi + padY;
+
+      var spanX = maxX - minX;
+      var vx0 = minX - spanX * 0.06;
+      var vx1 = maxX + spanX * 0.06;
+
+      function toPx(v) { return (v - vx0) / (vx1 - vx0) * width; }
+      function toPy(v) { return height - (v - vy0) / (vy1 - vy0) * height; }
+
+      // —— 网格 ——
+      var stepX = niceStep(vx1 - vx0, Math.max(2, Math.floor(width / 70)));
+      var stepY = niceStep(vy1 - vy0, Math.max(2, Math.floor(height / 50)));
+      var k, gx, gy, px, py;
+
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = gridColor;
+      for (k = Math.ceil(vx0 / stepX); k * stepX <= vx1 + 1e-9; k++) {
+        px = toPx(k * stepX);
+        ctx.beginPath();
+        ctx.moveTo(px, 0);
+        ctx.lineTo(px, height);
+        ctx.stroke();
+      }
+      for (k = Math.ceil(vy0 / stepY); k * stepY <= vy1 + 1e-9; k++) {
+        py = toPy(k * stepY);
+        ctx.beginPath();
+        ctx.moveTo(0, py);
+        ctx.lineTo(width, py);
+        ctx.stroke();
+      }
+
+      // —— 坐标轴 ——
+      var zeroY = (vy0 <= 0 && vy1 >= 0) ? toPy(0) : null;
+      var zeroX = (vx0 <= 0 && vx1 >= 0) ? toPx(0) : null;
+      ctx.strokeStyle = "rgba(23, 28, 52, 0.35)";
+      ctx.lineWidth = 1.2;
+      if (zeroY !== null) {
+        ctx.beginPath();
+        ctx.moveTo(0, zeroY);
+        ctx.lineTo(width, zeroY);
+        ctx.stroke();
+      }
+      if (zeroX !== null) {
+        ctx.beginPath();
+        ctx.moveTo(zeroX, 0);
+        ctx.lineTo(zeroX, height);
+        ctx.stroke();
+      }
+
+      // —— 刻度 ——
+      ctx.font = "11px 'PingFang SC','Microsoft YaHei',system-ui,sans-serif";
+      ctx.fillStyle = muted;
+
+      var textY = zeroY !== null ? Math.min(height - 4, zeroY + 14) : height - 6;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "alphabetic";
+      for (k = Math.ceil(vx0 / stepX); k * stepX <= vx1 + 1e-9; k++) {
+        gx = k * stepX;
+        if (Math.abs(gx) < stepX * 1e-6) continue;
+        ctx.fillText(chartTick(gx), toPx(gx), textY);
+      }
+
+      var textX = zeroX !== null ? Math.min(width - 4, zeroX - 6) : 4;
+      ctx.textAlign = zeroX !== null ? "right" : "left";
+      ctx.textBaseline = "middle";
+      for (k = Math.ceil(vy0 / stepY); k * stepY <= vy1 + 1e-9; k++) {
+        gy = k * stepY;
+        if (Math.abs(gy) < stepY * 1e-6) continue;
+        ctx.fillText(chartTick(gy), textX, toPy(gy));
+      }
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, width, height);
+      ctx.clip();
+
+      // —— 精确解（虚线） ——
+      if (exactPoints.length) {
+        ctx.save();
+        ctx.strokeStyle = accent2;
+        ctx.lineWidth = 1.8;
+        ctx.globalAlpha = 0.9;
+        if (typeof ctx.setLineDash === "function") ctx.setLineDash([6, 4]);
+
+        var startedExact = false;
+        var prevExact = NaN;
+        ctx.beginPath();
+        for (i = 0; i < exactPoints.length; i++) {
+          var ex = exactPoints[i];
+          if (!isFinite(ex.y)) { startedExact = false; prevExact = NaN; continue; }
+
+          var epx = toPx(ex.x);
+          var epy = toPy(ex.y);
+          if (!startedExact || Math.abs(ex.y - prevExact) > (vy1 - vy0) * 3) {
+            ctx.moveTo(epx, epy);
+            startedExact = true;
+          } else {
+            ctx.lineTo(epx, epy);
+          }
+          prevExact = ex.y;
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // —— 数值解（折线） ——
+      var gradient = ctx.createLinearGradient(0, 0, width, height);
+      gradient.addColorStop(0, accent);
+      gradient.addColorStop(1, accentInk);
+
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = 2.4;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      for (i = 0; i < pts.length; i++) {
+        if (!isFinite(pts[i].y)) continue;
+        var nx = toPx(pts[i].x);
+        var ny = toPy(pts[i].y);
+        if (i === 0) ctx.moveTo(nx, ny);
+        else ctx.lineTo(nx, ny);
+      }
+      ctx.stroke();
+
+      // —— 节点 ——
+      for (i = 0; i < pts.length; i++) {
+        if (!isFinite(pts[i].y)) continue;
+        if (pts.length > 60 && i !== 0 && i !== pts.length - 1) continue;
+
+        ctx.beginPath();
+        ctx.arc(toPx(pts[i].x), toPy(pts[i].y), 3.2, 0, Math.PI * 2);
+        ctx.fillStyle = "#fff";
+        ctx.fill();
+        ctx.lineWidth = 1.8;
+        ctx.strokeStyle = accent;
+        ctx.stroke();
+      }
+
+      ctx.restore();
+
+      // —— 图例 ——
+      var legendX = width - 118;
+      var legendY = 12;
+      var boxW = 106;
+      var boxH = chartData.exact ? 46 : 26;
+
+      chartRoundRect(ctx, legendX, legendY, boxW, boxH, 8);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.94)";
+      ctx.fill();
+      ctx.lineWidth = 1.1;
+      ctx.strokeStyle = gridColor;
+      ctx.stroke();
+
+      ctx.font = "600 11px 'PingFang SC','Microsoft YaHei',system-ui,sans-serif";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(legendX + 10, legendY + 13);
+      ctx.lineTo(legendX + 28, legendY + 13);
+      ctx.stroke();
+      ctx.fillStyle = accentInk;
+      ctx.fillText("数值解", legendX + 34, legendY + 13);
+
+      if (chartData.exact) {
+        ctx.save();
+        ctx.strokeStyle = accent2;
+        ctx.lineWidth = 1.8;
+        if (typeof ctx.setLineDash === "function") ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(legendX + 10, legendY + 33);
+        ctx.lineTo(legendX + 28, legendY + 33);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.fillStyle = "#b45309";
+        ctx.fillText("精确解", legendX + 34, legendY + 33);
+      }
+    }
+
+    /* ---------- 初始化 ---------- */
+
+    selectMethod(1);
+
+    document.addEventListener("DOMContentLoaded", function () {
+      drawChart();
+
+      var resizeTimer = null;
+      window.addEventListener("resize", function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(drawChart, 120);
+      });
+    });
+  </script>
+</body>
+
+</html>
