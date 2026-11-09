@@ -16,6 +16,7 @@ html { -webkit-text-size-adjust: 100%; }
   --card: #ffffff;
   --radius-lg: 22px;
   --radius: 14px;
+  --card-pad: 18px;   /* 卡片内边距：回显条吸顶时靠它做满宽出血 */
   --accent: #6366f1;
   --accent-2: #a855f7;
   --accent-soft: #eef0ff;
@@ -148,7 +149,7 @@ body::before {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  padding: 18px;
+  padding: var(--card-pad);
 }
 
 .stack > .card + .card { margin-top: 16px; }
@@ -620,15 +621,129 @@ body::before {
   color: var(--muted);
 }
 
+/* ---------- 手机端输入回显条 ----------
+   键盘在页面下方时，靠这条吸顶的窄条显示“当前在编辑哪个框、输入了什么” */
+.echo-bar { display: none; }
+
+@media (max-width: 859px) {
+  .echo-bar {
+    position: sticky;
+    top: var(--echo-top, 0px);
+    z-index: 15;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: calc(var(--card-pad) * -1) calc(var(--card-pad) * -1) 14px;
+    padding: 8px var(--card-pad) 9px;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    background: var(--accent-soft);
+    border-bottom: 1px solid rgba(23, 28, 52, 0.06);
+  }
+
+  /* 字段标签：一点即切换，不用滑回输入区 */
+  .field-tabs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    margin: 0 calc(var(--card-pad) * -1 + 2px);
+    padding: 0 calc(var(--card-pad) - 2px);
+  }
+
+  .field-tabs::-webkit-scrollbar { display: none; }
+
+  .field-tab {
+    flex: 0 0 auto;
+    padding: 4px 11px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.5;
+    white-space: nowrap;
+    color: var(--muted);
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(23, 28, 52, 0.07);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color 0.14s ease, background 0.14s ease, border-color 0.14s ease;
+  }
+
+  .field-tab:active { transform: scale(0.96); }
+
+  .field-tab.active {
+    color: #fff;
+    border-color: transparent;
+    background: linear-gradient(120deg, var(--accent), var(--accent-2));
+    box-shadow: 0 6px 14px -10px var(--accent);
+  }
+
+  .echo-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+
+  /* 有标签行时，字段名由标签承担，不再重复显示 */
+  .echo-bar.has-tabs .echo-label { display: none; }
+
+  .echo-label {
+    flex: 0 1 auto;
+    max-width: 42%;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--accent-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .echo-value {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-family: "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--ink);
+    white-space: pre;
+    text-align: right;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  .echo-value::-webkit-scrollbar { display: none; }
+
+  .echo-value.is-empty {
+    font-family: inherit;
+    font-weight: 500;
+    color: var(--muted);
+  }
+
+  .echo-caret {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    margin: 0 1px;
+    vertical-align: -0.16em;
+    background: var(--accent);
+    animation: echo-blink 1.05s steps(1) infinite;
+  }
+}
+
+@keyframes echo-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
 /* ---------- 小屏微调 ---------- */
 @media (max-width: 420px) {
+  :root { --card-pad: 15px; }
   .shell { padding: 14px 12px 32px; }
-  .card { padding: 15px; border-radius: 18px; }
+  .card { border-radius: 18px; }
   .btn { font-size: 14px; padding: 11px 18px; }
   .key { border-radius: 12px; }
   .titles p { display: none; }
   .chart { height: 240px; }
   .chart-tools .btn-sm { font-size: 12px; padding: 6px 10px; }
+  .field-tab { font-size: 11.5px; padding: 3px 9px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

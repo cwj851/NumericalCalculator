@@ -187,6 +187,9 @@
       // 当前光标所在的输入框若被隐藏，退回函数输入框
       var hiddenId = info.need === "n" ? "tolerance" : "nValue";
       if (ElementId === hiddenId) ElementId = "equation";
+
+      // 输入项随算法显隐，回显条同步切换
+      syncEcho();
     }
 
     function runIntegral() {
