@@ -116,17 +116,26 @@
 
       <aside class="card side">
         <h2 class="card-title">输入面板</h2>
-        <p class="card-note">插入到光标所在的输入框；系数可用 1/3、sqrt(2) 这类表达式。</p>
+        <p class="card-note">插入到光标所在的输入框；系数可用 1/3、sqrt(2)、sin(1) 这类表达式。</p>
 
         <div class="chips">
+          <button type="button" class="chip" onclick="insertSymbol('(')">(</button>
+          <button type="button" class="chip" onclick="insertSymbol(')')">)</button>
+          <button type="button" class="chip" onclick="insertSymbol('^')">x<sup>y</sup></button>
           <button type="button" class="chip" onclick="insertSymbol('/')">÷</button>
+          <button type="button" class="chip" onclick="insertSymbol('*')">×</button>
+          <button type="button" class="chip chip-key" onclick="insertSymbol('+')">+</button>
+          <button type="button" class="chip chip-key" onclick="insertSymbol('-')">−</button>
           <button type="button" class="chip" onclick="insertSymbol('sqrt()')">√</button>
           <button type="button" class="chip" onclick="insertSymbol('pi')">π</button>
           <button type="button" class="chip" onclick="insertSymbol('e')">e</button>
-          <button type="button" class="chip" onclick="insertSymbol('(')">(</button>
-          <button type="button" class="chip" onclick="insertSymbol(')')">)</button>
+          <button type="button" class="chip" onclick="insertSymbol('sin()')">sin</button>
+          <button type="button" class="chip" onclick="insertSymbol('cos()')">cos</button>
+          <button type="button" class="chip" onclick="insertSymbol('tan()')">tan</button>
+          <button type="button" class="chip" onclick="insertSymbol('ln()')">ln</button>
+          <button type="button" class="chip" onclick="insertSymbol('log()')">log</button>
+          <button type="button" class="chip" onclick="insertSymbol('exp()')">exp</button>
           <button type="button" class="chip chip-key" onclick="insertSymbol(',')">,</button>
-          <button type="button" class="chip chip-key" onclick="insertSymbol('-')">−</button>
         </div>
 
         <div class="keypad">
@@ -147,7 +156,7 @@
 
           <button type="button" class="key" onclick="insertSymbol('0')">0</button>
           <button type="button" class="key" onclick="insertSymbol('.')">.</button>
-          <button type="button" class="key op" onclick="insertSymbol(',')">,</button>
+          <button type="button" class="key op" onclick="insertSymbol('*')">×</button>
           <button type="button" class="key op" onclick="insertSymbol('+')">+</button>
         </div>
       </aside>
