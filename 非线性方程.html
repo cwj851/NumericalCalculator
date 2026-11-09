@@ -71,8 +71,8 @@
               <input type="text" id="tolerance" value="0.000001" placeholder="例如 1e-6" />
             </label>
             <label class="field">
-              <span>最大迭代次数 N</span>
-              <input type="text" id="maxIter" value="50" placeholder="例如 50" />
+              <span id="maxIterLabel">二分次数上限 N</span>
+              <input type="text" id="maxIter" value="50" placeholder="例如 30" />
             </label>
           </div>
 
@@ -195,7 +195,7 @@
 
     var methodInfo = {
       1: {
-        hint: "二分法：要求 f(a)·f(b) < 0。每次取区间中点作为近似根，误差以区间半长 (b−a)/2 衡量，收敛速度慢但一定收敛。",
+        hint: "二分法：要求 f(a)·f(b) < 0。每次把区间对半分，取中点作为近似根，误差上界为 (b−a)/2。只需二分 k 次就能把误差压到 (b−a)/2ᵏ，所以二分次数可由精度直接算出。",
         fields: "bisect"
       },
       2: {
@@ -314,6 +314,12 @@
       document.getElementById("newtonField").style.display = info.fields === "newton" ? "" : "none";
       document.getElementById("secantFields").style.display = info.fields === "secant" ? "" : "none";
       document.getElementById("methodHint").innerHTML = info.hint;
+
+      // 二分法每一步把区间对半，次数是“二分次数”，不是笼统的迭代次数
+      var label = document.getElementById("maxIterLabel");
+      var maxIterInput = document.getElementById("maxIter");
+      if (label) label.textContent = num === 1 ? "二分次数上限 N" : "最大迭代次数 N";
+      if (maxIterInput) maxIterInput.placeholder = num === 1 ? "例如 30" : "例如 50";
 
       // 当前编辑的输入框若被隐藏，退回函数输入框
       var hiddenIds = info.fields === "bisect" ? ["x0Value", "s0Value", "s1Value"]
@@ -498,9 +504,13 @@
       var tol = readNumber("tolerance");
       var maxIter = readNumber("maxIter");
 
+      var iterLabel = currentMethod === 1 ? "二分次数上限 N" : "最大迭代次数 N";
+
       if (!(tol > 0)) { showError("精度 tol 必须是正数。"); return; }
-      if (!(maxIter >= 1) || Math.floor(maxIter) !== maxIter) { showError("最大迭代次数 N 必须是正整数。"); return; }
-      if (maxIter > 10000) { showError("最大迭代次数过大，请不超过 10000。"); return; }
+      if (!(maxIter >= 1) || Math.floor(maxIter) !== maxIter) {
+        showError(iterLabel + " 必须是正整数。"); return;
+      }
+      if (maxIter > 10000) { showError(iterLabel + " 过大，请不超过 10000。"); return; }
 
       var useTol = stopMode === "tol";
       var out, a0 = NaN, b0 = NaN;
@@ -534,10 +544,17 @@
 
     /* ---------- 结果与过程 ---------- */
 
+    // 二分法的循环叫“二分”更贴切，牛顿/弦截才叫“迭代”
+    function countWord() {
+      return currentMethod === 1 ? "二分" : "迭代";
+    }
+
     function reasonText(out, tol, useTol) {
       if (out.reason === "exact") return "函数值恰好为 0，已得到精确根";
       if (out.reason === "tol") return "达到精度要求 tol = " + fmtNum(tol);
-      return useTol ? "未达到精度，已跑满 " + out.iterations + " 次" : "按次数停止（共 " + out.iterations + " 次）";
+      return useTol
+        ? "未达到精度，已" + countWord() + " " + out.iterations + " 次"
+        : "按次数停止（共 " + out.iterations + " 次）";
     }
 
     function renderResult(out, tol, maxIter, useTol) {
@@ -546,7 +563,7 @@
 
       var html = "近似根 x* ≈ " + fmtNum(out.root) + "<br>";
       html += "f(x*) = " + fmtNum(froot) + "<br>";
-      html += "迭代 " + out.iterations + " 次 · " + reasonText(out, tol, useTol);
+      html += countWord() + " " + out.iterations + " 次 · " + reasonText(out, tol, useTol);
       document.getElementById("result").innerHTML = html;
     }
 
@@ -559,13 +576,14 @@
       html += '<p class="step-line"><b>方程</b> f(x) = ' +
         escapeText(stripSpaces(document.getElementById("equation").value)) + ' = 0</p>';
       html += '<p class="step-line"><b>方法</b> ' + methodName() + '；<b>停止条件</b> ' +
-        (useTol ? "达到精度 tol = " + fmtNum(tol) : "跑满 " + maxIter + " 次") + '</p>';
+        (useTol ? "达到精度 tol = " + fmtNum(tol)
+          : (currentMethod === 1 ? "最多二分 " : "跑满 ") + fmtNum(maxIter) + " 次") + '</p>';
 
-      if (currentMethod === 1) html += bisectStepsHtml(out, tol, maxIter);
+      if (currentMethod === 1) html += bisectStepsHtml(out, tol, maxIter, useTol);
       else if (currentMethod === 2) html += newtonStepsHtml(out);
       else html += secantStepsHtml(out);
 
-      html += '<p class="step-line"><b>结果</b> x* ≈ ' + fmtNum(out.root) + '（迭代 ' +
+      html += '<p class="step-line"><b>结果</b> x* ≈ ' + fmtNum(out.root) + '（' + countWord() + ' ' +
         out.iterations + ' 次，' + reasonText(out, tol, useTol) + '）</p>';
 
       box.innerHTML = html;
@@ -594,14 +612,27 @@
       return idx;
     }
 
-    function bisectStepsHtml(out, tol, maxIter) {
+    function bisectStepsHtml(out, tol, maxIter, useTol) {
       var html = "";
+      var width = out.domain[1] - out.domain[0];
       html += '<p class="step-line"><b>初始区间</b> [' + fmtNum(out.domain[0]) + ', ' + fmtNum(out.domain[1]) +
-        ']，区间长度 ' + fmtNum(out.domain[1] - out.domain[0]) + '</p>';
+        ']，区间长度 ' + fmtNum(width) + '</p>';
       html += '<p class="step-formula">每次取中点 xₖ = (a + b)/2，判断 f(xₖ) 与 f(a) 是否异号：异号则根在左半区间（b ← xₖ），否则在右半（a ← xₖ）；误差上界为 (b − a)/2</p>';
 
+      if (useTol) {
+        if (width <= tol) {
+          html += '<p class="step-line"><b>所需二分次数</b> 区间长度已不超过 tol，二分 1 次即可达到精度</p>';
+        } else {
+          var raw = Math.log(width / tol) / Math.LN2;
+          var need = Math.ceil(raw);
+          html += '<p class="step-line"><b>所需二分次数</b> 由 (b − a)/2ᵏ ≤ tol 得 k ≥ log₂((b − a)/tol) = ' +
+            fmtNum(Number(raw.toPrecision(4))) + '，至少 ' + need + ' 次' +
+            (out.reason === "tol" ? '（本次二分 ' + out.iterations + ' 次达到精度）' : '') + '</p>';
+        }
+      }
+
       if (out.recs.length === 0) {
-        html += '<p class="step-note">端点函数值恰为 0，无需迭代。</p>';
+        html += '<p class="step-note">端点函数值恰为 0，无需二分。</p>';
         return html;
       }
 
@@ -619,7 +650,7 @@
       html += '</tbody></table></div>';
 
       if (out.recs.length > idx.length) {
-        html += '<p class="step-note">表中只列出部分迭代（共 ' + out.recs.length + ' 次）。</p>';
+        html += '<p class="step-note">表中只列出部分二分（共 ' + out.recs.length + ' 次）。</p>';
       }
       return html;
     }
