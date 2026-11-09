@@ -170,6 +170,7 @@ function getFieldLabel(input) {
     var span = holder.querySelector("span");
     if (span) text = span.textContent.trim();
   }
+  if (!text) text = input.getAttribute("data-label") || "";
   if (!text) text = input.getAttribute("placeholder") || "输入内容";
 
   // 回显条空间有限，“方程（未知数用 x 表示）”这类括号说明只保留主干

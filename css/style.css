@@ -41,6 +41,10 @@ body.theme-int    { --accent: #f43f5e; --accent-2: #fb923c; --accent-soft: #ffed
                     --glow-1: rgba(244, 63, 94, 0.16); --glow-2: rgba(251, 146, 60, 0.18); --glow-3: rgba(244, 114, 182, 0.14); }
 body.theme-numint { --accent: #0d9488; --accent-2: #38bdf8; --accent-soft: #e6fbf6; --accent-ink: #0f766e;
                     --glow-1: rgba(13, 148, 136, 0.18); --glow-2: rgba(56, 189, 248, 0.18); --glow-3: rgba(52, 211, 153, 0.16); }
+body.theme-nonlin { --accent: #16a34a; --accent-2: #84cc16; --accent-soft: #eafbec; --accent-ink: #15803d;
+                    --glow-1: rgba(22, 163, 74, 0.18); --glow-2: rgba(132, 204, 22, 0.18); --glow-3: rgba(52, 211, 153, 0.14); }
+body.theme-interp { --accent: #7c3aed; --accent-2: #0ea5e9; --accent-soft: #f3ecff; --accent-ink: #5b21b6;
+                    --glow-1: rgba(124, 58, 237, 0.18); --glow-2: rgba(14, 165, 233, 0.18); --glow-3: rgba(168, 85, 247, 0.14); }
 
 html, body { margin: 0; }
 
@@ -232,6 +236,77 @@ body::before {
 .field-row > .field { margin-bottom: 13px; }
 
 .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; }
+
+/* ---------- 数据点表格（插值与拟合） ---------- */
+.points-head,
+.point-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr) 32px;
+  gap: 8px;
+  align-items: center;
+}
+
+.points-head {
+  padding: 0 2px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.points-head span:first-child { text-align: center; }
+
+.point-row { margin-bottom: 8px; }
+
+.point-row .idx {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: center;
+}
+
+.point-row input {
+  width: 100%;
+  padding: 9px 11px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--ink);
+  background: #f7f8fd;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.point-row input::placeholder { color: #b3b9d1; }
+
+.point-row input:focus {
+  background: #fff;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.row-del {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--muted);
+  background: #f2f4fb;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: color 0.16s ease, background 0.16s ease;
+}
+
+.row-del:hover { color: #be123c; background: #ffeef1; }
+
+.points-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 16px; }
+
+.point-count { font-size: 12px; font-weight: 700; color: var(--muted); }
 
 /* ---------- 示例 ---------- */
 .examples { margin-top: 16px; }
@@ -565,6 +640,7 @@ body::before {
 .c-int { --c1: #f43f5e; --c2: #fb923c; }
 .c-numint { --c1: #0d9488; --c2: #38bdf8; }
 .c-nonlin { --c1: #16a34a; --c2: #a3e635; }
+.c-interp { --c1: #7c3aed; --c2: #0ea5e9; }
 
 .page-foot {
   margin-top: 26px;

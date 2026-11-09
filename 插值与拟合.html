@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>插值与拟合 · 数值计算器</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body class="theme-interp">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="back-btn" href="index.html">← 首页</a>
+      <div class="titles">
+        <h1>插值与拟合</h1>
+        <p>拉格朗日插值 · 牛顿插值 · 最小二乘拟合</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <nav class="tabs" role="tablist" aria-label="插值与拟合方法">
+      <button type="button" class="tab active" role="tab" data-method="1" onclick="selectMethod(1)">拉格朗日插值</button>
+      <button type="button" class="tab" role="tab" data-method="2" onclick="selectMethod(2)">牛顿插值</button>
+      <button type="button" class="tab" role="tab" data-method="3" onclick="selectMethod(3)">最小二乘拟合</button>
+    </nav>
+
+    <div class="workspace">
+
+      <div class="stack">
+
+        <section class="card">
+          <div class="card-head">
+            <h2 class="card-title">数据点</h2>
+            <span class="point-count" id="pointCount">共 4 个点</span>
+          </div>
+
+          <div class="points-head">
+            <span>#</span>
+            <span>xᵢ</span>
+            <span>yᵢ</span>
+            <span></span>
+          </div>
+
+          <div id="pointRows"></div>
+
+          <div class="points-actions">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="addPoint()">+ 添加点</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="removeLastPoint()">删除末尾</button>
+          </div>
+
+          <div class="field" id="degreeField" style="display:none">
+            <span>拟合多项式次数</span>
+            <div class="tabs tabs-compact" id="degreeTabs">
+              <button type="button" class="tab active" data-deg="1" onclick="setDegree(1)">一次 y = a₀ + a₁x</button>
+              <button type="button" class="tab" data-deg="2" onclick="setDegree(2)">二次 y = a₀ + a₁x + a₂x²</button>
+              <button type="button" class="tab" data-deg="3" onclick="setDegree(3)">三次</button>
+            </div>
+          </div>
+
+          <label class="field">
+            <span>求值点 x（可选，多个用逗号分隔）</span>
+            <input type="text" id="evalPoints" inputmode="decimal" placeholder="例如 1.5, 2.5" data-enter="computeInterp" />
+          </label>
+
+          <p class="algo-hint" id="methodHint"></p>
+
+          <div class="actions">
+            <button type="button" class="btn btn-primary" onclick="computeInterp()">计 算</button>
+            <button type="button" class="btn btn-ghost" onclick="resetPoints()">重 置</button>
+          </div>
+
+          <div class="examples">
+            <p>快速示例</p>
+            <div class="example-row">
+              <button type="button" class="example" onclick="usePreset('square')">y = x²（4 点）</button>
+              <button type="button" class="example" onclick="usePreset('sin')">sin x（5 点）</button>
+              <button type="button" class="example" onclick="usePreset('line')">近似直线（5 点）</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2 class="card-title">结果</h2>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="copyResult('result')">复制结果</button>
+          </div>
+          <p id="result" class="result" data-empty="选择方法、填好数据点后点击“计算”"></p>
+        </section>
+
+        <section class="card" id="stepsCard" style="display:none">
+          <div class="card-head">
+            <h2 class="card-title">计算过程</h2>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="copySteps()">复制过程</button>
+          </div>
+          <div class="steps" id="steps"></div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2 class="card-title">图示</h2>
+          </div>
+          <div class="chart-box">
+            <canvas id="chart" class="chart" role="img" aria-label="数据点与插值或拟合曲线"></canvas>
+          </div>
+          <p class="chart-tip" id="chartTip">计算后这里会画出数据点与曲线。</p>
+        </section>
+
+      </div>
+
+      <aside class="card side">
+        <h2 class="card-title">输入面板</h2>
+        <p class="card-note">数字插入到光标所在的输入框，用于填写 xᵢ、yᵢ 与求值点。</p>
+
+        <div class="chips">
+          <button type="button" class="chip" onclick="insertSymbol(',')">,</button>
+          <button type="button" class="chip" onclick="insertSymbol('-')">−</button>
+          <button type="button" class="chip" onclick="insertSymbol('.')">.</button>
+        </div>
+
+        <div class="keypad">
+          <button type="button" class="key" onclick="insertSymbol('7')">7</button>
+          <button type="button" class="key" onclick="insertSymbol('8')">8</button>
+          <button type="button" class="key" onclick="insertSymbol('9')">9</button>
+          <button type="button" class="key back" onclick="backspace()">⌫</button>
+
+          <button type="button" class="key" onclick="insertSymbol('4')">4</button>
+          <button type="button" class="key" onclick="insertSymbol('5')">5</button>
+          <button type="button" class="key" onclick="insertSymbol('6')">6</button>
+          <button type="button" class="key op" onclick="insertSymbol('-')">−</button>
+
+          <button type="button" class="key" onclick="insertSymbol('1')">1</button>
+          <button type="button" class="key" onclick="insertSymbol('2')">2</button>
+          <button type="button" class="key" onclick="insertSymbol('3')">3</button>
+          <button type="button" class="key op" onclick="insertSymbol('.')">.</button>
+
+          <button type="button" class="key" onclick="insertSymbol('0')">0</button>
+          <button type="button" class="key op" onclick="insertSymbol('+')">+</button>
+          <button type="button" class="key op" onclick="insertSymbol('e')">e</button>
+          <button type="button" class="key op" onclick="insertSymbol(',')">,</button>
+        </div>
+      </aside>
+
+    </div>
+  </main>
+
+  <div id="toast" class="toast">已复制</div>
+
+  <script src="js/ui.js"></script>
+
+  <script>
+    /* ==========================================================
+       插值与拟合：拉格朗日插值 / 牛顿插值 / 最小二乘拟合
+       ========================================================== */
+
+    var currentMethod = 1;   // 1 拉格朗日 2 牛顿 3 最小二乘
+    var fitDegree = 1;       // 最小二乘次数 1 / 2 / 3
+
+    var methodInfo = {
+      1: {
+        name: "拉格朗日插值",
+        hint: "拉格朗日插值：n 个点唯一确定一个次数不超过 n−1 的多项式。先构造基函数 lᵢ(x) = ∏ⱼ≠ᵢ (x − xⱼ)/(xᵢ − xⱼ)，再取 P(x) = Σ yᵢ·lᵢ(x)；公式直观，但增减数据点要全部重算。"
+      },
+      2: {
+        name: "牛顿插值",
+        hint: "牛顿插值：用差商表逐阶构造，P(x) = f[x₀] + f[x₀,x₁](x − x₀) + f[x₀,x₁,x₂](x − x₀)(x − x₁) + ⋯。新增数据点只需在表尾续算，展开后与拉格朗日插值是同一个多项式。"
+      },
+      3: {
+        name: "最小二乘拟合",
+        hint: "最小二乘拟合：不要求曲线穿过所有点，而是让残差平方和 Σ(yᵢ − ŷᵢ)² 最小。对多项式 y = a₀ + a₁x + ⋯ + a_mxᵐ，解正规方程（法方程组）得到系数，适合数据本身带有误差的场合。"
+      }
+    };
+
+    var defaultPoints = [
+      { x: "0", y: "0" },
+      { x: "1", y: "1" },
+      { x: "2", y: "4" },
+      { x: "3", y: "9" }
+    ];
+
+    /* ---------- 基础工具 ---------- */
+
+    function stripSpaces(text) {
+      var out = "";
+      for (var i = 0; i < text.length; i++) {
+        var ch = text.substring(i, i + 1);
+        if (ch !== " ") out += ch;
+      }
+      return out;
+    }
+
+    function fmtNum(v) {
+      if (typeof v !== "number" || !isFinite(v)) return "—";
+      if (v === 0) return "0";
+      var abs = Math.abs(v);
+      if (abs >= 1e6 || abs < 1e-6) return v.toExponential(4);
+      return String(Number(v.toPrecision(8)));
+    }
+
+    function escapeText(text) {
+      return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    var SUP = { "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹" };
+    var SUB = { "0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄", "5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉" };
+
+    function sup(n) {
+      return String(n).split("").map(function (ch) { return SUP[ch] || ch; }).join("");
+    }
+
+    function sub(n) {
+      return String(n).split("").map(function (ch) { return SUB[ch] || ch; }).join("");
+    }
+
+    var CN_NUM = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
+
+    function orderName(k) {
+      return (CN_NUM[k] || String(k)) + "阶";
+    }
+
+    /* ---------- 多项式工具（系数按升幂排列） ---------- */
+
+    function polyMul(a, b) {
+      var out = [];
+      for (var i = 0; i < a.length + b.length - 1; i++) out.push(0);
+      for (i = 0; i < a.length; i++) {
+        for (var j = 0; j < b.length; j++) out[i + j] += a[i] * b[j];
+      }
+      return out;
+    }
+
+    function polyAdd(a, b) {
+      var len = Math.max(a.length, b.length);
+      var out = [];
+      for (var i = 0; i < len; i++) out.push((a[i] || 0) + (b[i] || 0));
+      return out;
+    }
+
+    function polyEval(coefs, x) {
+      var value = 0;
+      for (var i = coefs.length - 1; i >= 0; i--) value = value * x + (coefs[i] || 0);
+      return value;
+    }
+
+    /* 去掉浮点噪声：小于最大系数 5e-13 倍的项视为 0 */
+    function cleanCoef(v, maxAbs) {
+      if (!isFinite(v)) return 0;
+      if (maxAbs > 0 && Math.abs(v) < maxAbs * 5e-13) return 0;
+      return Number(v.toPrecision(12));
+    }
+
+    /* 实际次数：最高非零项（插值多项式次数不超过 n − 1，可能正好更低） */
+    function polyDegree(coefs) {
+      var maxAbs = 0, i;
+      for (i = 0; i < coefs.length; i++) maxAbs = Math.max(maxAbs, Math.abs(coefs[i] || 0));
+      for (i = coefs.length - 1; i > 0; i--) {
+        if (cleanCoef(coefs[i] || 0, maxAbs) !== 0) return i;
+      }
+      return 0;
+    }
+
+    function polyToString(coefs, name) {
+      name = name || "x";
+      var maxAbs = 0, i;
+      for (i = 0; i < coefs.length; i++) maxAbs = Math.max(maxAbs, Math.abs(coefs[i] || 0));
+
+      var text = "";
+      for (i = coefs.length - 1; i >= 0; i--) {
+        var c = cleanCoef(coefs[i] || 0, maxAbs);
+        if (c === 0) continue;
+
+        var abs = Math.abs(c);
+        var body = (abs === 1 && i > 0) ? "" : fmtNum(abs);
+        var tail = i === 0 ? "" : (i === 1 ? name : name + sup(i));
+
+        if (text === "") text = (c < 0 ? "−" : "") + body + tail;
+        else text += (c < 0 ? " − " : " + ") + body + tail;
+      }
+
+      return text === "" ? "0" : text;
+    }
+
+    /* 高斯消元（列主元）解 A·x = b，奇异时返回 null */
+    function solveLinear(A, b) {
+      var n = A.length, i, j, k;
+      var M = [];
+      for (i = 0; i < n; i++) {
+        M.push(A[i].slice());
+        M[i].push(b[i]);
+      }
+
+      for (i = 0; i < n; i++) {
+        var piv = i;
+        for (j = i + 1; j < n; j++) {
+          if (Math.abs(M[j][i]) > Math.abs(M[piv][i])) piv = j;
+        }
+        if (Math.abs(M[piv][i]) < 1e-12) return null;
+
+        var tmp = M[i];
+        M[i] = M[piv];
+        M[piv] = tmp;
+
+        for (j = i + 1; j < n; j++) {
+          var factor = M[j][i] / M[i][i];
+          if (factor === 0) continue;
+          for (k = i; k <= n; k++) M[j][k] -= factor * M[i][k];
+        }
+      }
+
+      var x = [];
+      for (i = n - 1; i >= 0; i--) {
+        var sum = M[i][n];
+        for (j = i + 1; j < n; j++) sum -= M[i][j] * x[j];
+        x[i] = sum / M[i][i];
+      }
+      return x;
+    }
+
+    /* ---------- 数据点输入 ---------- */
+
+    function pointRows() {
+      var box = document.getElementById("pointRows");
+      return box ? box.querySelectorAll(".point-row") : [];
+    }
+
+    function bindPointInput(input) {
+      input.addEventListener("focus", function () {
+        if (input.id) ElementId = input.id;
+        syncEcho();
+      });
+      input.addEventListener("input", syncEcho);
+      input.addEventListener("keyup", syncEcho);
+      input.addEventListener("click", syncEcho);
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          computeInterp();
+        }
+      });
+    }
+
+    function makeRow(point) {
+      var row = document.createElement("div");
+      row.className = "point-row";
+
+      var idx = document.createElement("span");
+      idx.className = "idx";
+
+      var xi = document.createElement("input");
+      xi.type = "text";
+      xi.className = "x";
+      xi.setAttribute("inputmode", "decimal");
+      xi.placeholder = "x";
+      xi.value = point.x;
+
+      var yi = document.createElement("input");
+      yi.type = "text";
+      yi.className = "y";
+      yi.setAttribute("inputmode", "decimal");
+      yi.placeholder = "y";
+      yi.value = point.y;
+
+      var del = document.createElement("button");
+      del.type = "button";
+      del.className = "row-del";
+      del.title = "删除该数据点";
+      del.innerHTML = "×";
+      del.addEventListener("click", function () { removeRow(row); });
+
+      row.appendChild(idx);
+      row.appendChild(xi);
+      row.appendChild(yi);
+      row.appendChild(del);
+
+      bindPointInput(xi);
+      bindPointInput(yi);
+      return row;
+    }
+
+    function renderPoints(list) {
+      var box = document.getElementById("pointRows");
+      if (!box) return;
+      box.innerHTML = "";
+      for (var i = 0; i < list.length; i++) box.appendChild(makeRow(list[i]));
+      reindexRows();
+    }
+
+    function reindexRows() {
+      var rows = pointRows();
+      for (var i = 0; i < rows.length; i++) {
+        rows[i].querySelector(".idx").textContent = String(i + 1);
+        var xi = rows[i].querySelector("input.x");
+        var yi = rows[i].querySelector("input.y");
+        xi.id = "px" + i;
+        yi.id = "py" + i;
+        xi.setAttribute("data-label", "第 " + (i + 1) + " 个点的 x");
+        yi.setAttribute("data-label", "第 " + (i + 1) + " 个点的 y");
+      }
+
+      var count = document.getElementById("pointCount");
+      if (count) count.textContent = "共 " + rows.length + " 个点";
+
+      if (!document.getElementById(ElementId) && rows.length) {
+        ElementId = rows[0].querySelector("input.x").id;
+      }
+      syncEcho();
+    }
+
+    function collectRaw() {
+      var rows = pointRows(), list = [];
+      for (var i = 0; i < rows.length; i++) {
+        list.push({
+          x: rows[i].querySelector("input.x").value,
+          y: rows[i].querySelector("input.y").value
+        });
+      }
+      return list;
+    }
+
+    function addPoint() {
+      var list = collectRaw();
+      list.push({ x: "", y: "" });
+      renderPoints(list);
+
+      var rows = pointRows();
+      var input = rows[rows.length - 1].querySelector("input.x");
+      ElementId = input.id;
+      focusInput(input);
+      syncEcho();
+    }
+
+    function removeRow(row) {
+      var rows = pointRows();
+      if (rows.length <= 2) { showToast("至少保留 2 个数据点"); return; }
+
+      var list = collectRaw();
+      var index = Array.prototype.indexOf.call(rows, row);
+      if (index < 0) return;
+      list.splice(index, 1);
+      renderPoints(list);
+
+      var left = pointRows();
+      if (left.length) ElementId = left[0].querySelector("input.x").id;
+      syncEcho();
+    }
+
+    function removeLastPoint() {
+      var list = collectRaw();
+      if (list.length <= 2) { showToast("至少保留 2 个数据点"); return; }
+      list.pop();
+      renderPoints(list);
+      syncEcho();
+    }
+
+    function resetPoints() {
+      renderPoints(defaultPoints);
+      fitDegree = 1;
+      syncDegreeTabs();
+      clearOutput();
+      ElementId = "px0";
+      syncEcho();
+    }
+
+    function usePreset(name) {
+      var sets = {
+        square: defaultPoints,
+        sin: [
+          { x: "0", y: "0" },
+          { x: "0.5", y: "0.4794" },
+          { x: "1", y: "0.8415" },
+          { x: "1.5", y: "0.9975" },
+          { x: "2", y: "0.9093" }
+        ],
+        line: [
+          { x: "0", y: "1.1" },
+          { x: "1", y: "2.9" },
+          { x: "2", y: "5.2" },
+          { x: "3", y: "6.8" },
+          { x: "4", y: "9.1" }
+        ]
+      };
+
+      var list = sets[name] || defaultPoints;
+      renderPoints(list);
+      if (name === "line") setDegree(1);
+      ElementId = "px0";
+      syncEcho();
+      computeInterp();
+    }
+
+    /* ---------- 方法切换 ---------- */
+
+    function selectMethod(num) {
+      currentMethod = num;
+
+      var tabs = document.querySelectorAll(".tabs .tab[data-method]");
+      for (var i = 0; i < tabs.length; i++) {
+        var active = tabs[i].getAttribute("data-method") == String(num);
+        tabs[i].className = active ? "tab active" : "tab";
+        tabs[i].setAttribute("aria-selected", active ? "true" : "false");
+      }
+
+      document.getElementById("degreeField").style.display = num === 3 ? "" : "none";
+      document.getElementById("methodHint").innerHTML = methodInfo[num].hint;
+      clearOutput();
+    }
+
+    function setDegree(deg) {
+      fitDegree = deg;
+      syncDegreeTabs();
+      clearOutput();
+    }
+
+    function syncDegreeTabs() {
+      var tabs = document.querySelectorAll("#degreeTabs .tab");
+      for (var i = 0; i < tabs.length; i++) {
+        var active = tabs[i].getAttribute("data-deg") == String(fitDegree);
+        tabs[i].className = active ? "tab active" : "tab";
+        tabs[i].setAttribute("aria-selected", active ? "true" : "false");
+      }
+    }
+
+    function methodName() {
+      return methodInfo[currentMethod].name;
+    }
+
+    function degreeName() {
+      return CN_NUM[fitDegree] + "次";
+    }
+
+    /* ---------- 读取数据 ---------- */
+
+    function readValues() {
+      var rows = pointRows();
+      var xs = [], ys = [];
+
+      for (var i = 0; i < rows.length; i++) {
+        var xText = stripSpaces(rows[i].querySelector("input.x").value);
+        var yText = stripSpaces(rows[i].querySelector("input.y").value);
+
+        if (xText === "" && yText === "") continue;
+        if (xText === "" || yText === "") {
+          return { error: "第 " + (i + 1) + " 个数据点的 x 或 y 没有填写完整。" };
+        }
+
+        var x = Number(xText), y = Number(yText);
+        if (!isFinite(x) || !isFinite(y)) {
+          return { error: "第 " + (i + 1) + " 个数据点的 x 或 y 不是有效数字。" };
+        }
+        xs.push(x);
+        ys.push(y);
+      }
+
+      return { xs: xs, ys: ys };
+    }
+
+    function parseEvalPoints() {
+      var text = stripSpaces(document.getElementById("evalPoints").value);
+      text = text.replace(/，/g, ",");
+      if (text === "") return { list: [] };
+
+      var parts = text.split(",");
+      var list = [];
+
+      for (var i = 0; i < parts.length; i++) {
+        if (parts[i] === "") continue;
+        var v = Number(parts[i]);
+        if (!isFinite(v)) return { error: "求值点里有无法识别的数字：" + parts[i] };
+        list.push(v);
+      }
+
+      if (list.length > 30) return { error: "求值点最多 30 个。" };
+      return { list: list };
+    }
+
+    function countDistinct(list) {
+      var seen = [], n = 0;
+      for (var i = 0; i < list.length; i++) {
+        if (seen.indexOf(list[i]) === -1) { seen.push(list[i]); n++; }
+      }
+      return n;
+    }
+
+    /* ---------- 算法 ---------- */
+
+    function lagrangeInterp(xs, ys) {
+      var n = xs.length;
+      var total = [0];
+      var basis = [];
+
+      for (var i = 0; i < n; i++) {
+        var num = [1];
+        var den = 1;
+
+        for (var j = 0; j < n; j++) {
+          if (j === i) continue;
+          num = polyMul(num, [-xs[j], 1]);
+          den *= (xs[i] - xs[j]);
+        }
+
+        if (!isFinite(den) || den === 0) return { error: "存在相同的 x 值，无法做插值。" };
+
+        var scaled = [];
+        for (var k = 0; k < num.length; k++) scaled.push(num[k] * ys[i] / den);
+
+        basis.push({ num: num, den: den, coefs: scaled, y: ys[i] });
+        total = polyAdd(total, scaled);
+      }
+
+      return { coefs: total, basis: basis, xs: xs, ys: ys };
+    }
+
+    function newtonInterp(xs, ys) {
+      var n = xs.length;
+      var table = [], i, k;
+
+      for (i = 0; i < n; i++) {
+        table.push([]);
+        table[i][0] = ys[i];
+      }
+
+      for (k = 1; k < n; k++) {
+        for (i = 0; i + k < n; i++) {
+          var den = xs[i + k] - xs[i];
+          if (den === 0) return { error: "存在相同的 x 值，无法做插值。" };
+          table[i][k] = (table[i + 1][k - 1] - table[i][k - 1]) / den;
+        }
+      }
+
+      var coefs = [0];
+      var term = [1];
+      var dd = [];
+
+      for (k = 0; k < n; k++) {
+        var coef = table[0][k];
+        dd.push(coef);
+        var scaled = [];
+        for (i = 0; i < term.length; i++) scaled.push(term[i] * coef);
+        coefs = polyAdd(coefs, scaled);
+        if (k < n - 1) term = polyMul(term, [-xs[k], 1]);
+      }
+
+      return { coefs: coefs, table: table, dd: dd, xs: xs, ys: ys };
+    }
+
+    function leastSquaresFit(xs, ys, deg) {
+      var m = deg + 1, n = xs.length;
+      var i, j, k;
+      var A = [], b = [];
+
+      for (j = 0; j < m; j++) {
+        var row = [];
+        for (k = 0; k < m; k++) {
+          var sum = 0;
+          for (i = 0; i < n; i++) sum += Math.pow(xs[i], j + k);
+          row.push(sum);
+        }
+        A.push(row);
+
+        var sumY = 0;
+        for (i = 0; i < n; i++) sumY += ys[i] * Math.pow(xs[i], j);
+        b.push(sumY);
+      }
+
+      var coefs = solveLinear(A, b);
+      if (!coefs) return { error: "法方程组奇异，无法拟合：请增加数据点，或降低拟合次数。" };
+
+      var mean = 0;
+      for (i = 0; i < n; i++) mean += ys[i];
+      mean /= n;
+
+      var fitted = [], residuals = [], sse = 0, sst = 0;
+      for (i = 0; i < n; i++) {
+        var yh = polyEval(coefs, xs[i]);
+        fitted.push(yh);
+        residuals.push(ys[i] - yh);
+        sse += (ys[i] - yh) * (ys[i] - yh);
+        sst += (ys[i] - mean) * (ys[i] - mean);
+      }
+
+      var r2 = sst > 0 ? 1 - sse / sst : (sse === 0 ? 1 : 0);
+
+      return {
+        coefs: coefs, xs: xs, ys: ys, deg: deg,
+        fitted: fitted, residuals: residuals,
+        sse: sse, rmse: Math.sqrt(sse / n), r2: r2,
+        A: A, b: b
+      };
+    }
+
+    /* ---------- 求解入口 ---------- */
+
+    function clearOutput() {
+      document.getElementById("result").innerHTML = "";
+      hideSteps();
+      document.getElementById("steps").innerHTML = "";
+      chartData.coefs = null;
+      chartData.pairs = [];
+      chartData.evalXs = [];
+      chartData.fitted = [];
+      chartData.showResiduals = false;
+      drawChart();
+      var tip = document.getElementById("chartTip");
+      if (tip) tip.textContent = "计算后这里会画出数据点与曲线。";
+    }
+
+    function showError(message) {
+      document.getElementById("result").innerHTML = message;
+      hideSteps();
+      document.getElementById("steps").innerHTML = "";
+      chartData.coefs = null;
+      chartData.pairs = [];
+      chartData.evalXs = [];
+      chartData.fitted = [];
+      chartData.showResiduals = false;
+      drawChart();
+
+      var tip = document.getElementById("chartTip");
+      if (tip) tip.textContent = "计算后这里会画出数据点与曲线。";
+    }
+
+    function computeInterp() {
+      var data = readValues();
+      if (data.error) { showError(data.error); return; }
+
+      var xs = data.xs, ys = data.ys, n = xs.length;
+
+      if (n < 2) { showError("至少需要 2 个数据点。"); return; }
+      if (currentMethod === 3) {
+        if (n > 100) { showError("拟合数据点最多 100 个。"); return; }
+      } else if (n > 12) {
+        showError("插值数据点最多 12 个：n 个点对应次数 n − 1 的多项式，再多不宜手算。");
+        return;
+      }
+
+      if (currentMethod === 3) {
+        var need = fitDegree + 1;
+        var distinct = countDistinct(xs);
+        if (distinct < need) {
+          showError("最小二乘" + degreeName() + "至少需要 " + need + " 个互不相同的 x，当前只有 " + distinct + " 个。");
+          return;
+        }
+      } else if (countDistinct(xs) < n) {
+        showError("插值要求 x 值互不相同。");
+        return;
+      }
+
+      var evalResult = parseEvalPoints();
+      if (evalResult.error) { showError(evalResult.error); return; }
+
+      var model;
+      if (currentMethod === 1) model = lagrangeInterp(xs, ys);
+      else if (currentMethod === 2) model = newtonInterp(xs, ys);
+      else model = leastSquaresFit(xs, ys, fitDegree);
+
+      if (model.error) { showError(model.error); return; }
+
+      model.evalXs = evalResult.list;
+
+      renderResult(model);
+      renderSteps(model);
+      renderChart(model);
+    }
+
+    /* ---------- 结果 ---------- */
+
+    function fnName() {
+      return currentMethod === 3 ? "y" : "P";
+    }
+
+    function resultText(model) {
+      if (currentMethod === 3) {
+        return "y = " + polyToString(model.coefs);
+      }
+      return "P(x) = " + polyToString(model.coefs);
+    }
+
+    function renderResult(model) {
+      var html = resultText(model) + "<br>";
+
+      if (currentMethod === 3) {
+        html += "SSE = " + fmtNum(model.sse) + " · RMSE = " + fmtNum(model.rmse) +
+          " · R² = " + fmtNum(model.r2) + "<br>";
+        html += model.xs.length + " 个数据点 · " + degreeName() + "拟合";
+      } else {
+        html += "多项式次数 " + polyDegree(model.coefs) + " · " +
+          model.xs.length + " 个数据点 · " + methodName();
+      }
+
+      if (model.evalXs.length) {
+        html += "<br>";
+        for (var i = 0; i < model.evalXs.length; i++) {
+          var x = model.evalXs[i];
+          if (i) html += " 　 ";
+          html += fnName() + "(" + fmtNum(x) + ") = " + fmtNum(polyEval(model.coefs, x));
+        }
+      }
+
+      document.getElementById("result").innerHTML = html;
+    }
+
+    /* ---------- 过程 ---------- */
+
+    function pointsLine(xs, ys) {
+      var parts = [];
+      var limit = Math.min(xs.length, 8);
+      for (var i = 0; i < limit; i++) {
+        parts.push("(" + fmtNum(xs[i]) + ", " + fmtNum(ys[i]) + ")");
+      }
+      var text = parts.join("，");
+      if (xs.length > limit) text += " 等 " + xs.length + " 个点";
+      return '<p class="step-line"><b>数据点</b> ' + text + '</p>';
+    }
+
+    function renderSteps(model) {
+      var card = document.getElementById("stepsCard");
+      var box = document.getElementById("steps");
+      if (!card || !box) return;
+
+      var html = "";
+      html += '<p class="step-line"><b>方法</b> ' + methodName() +
+        (currentMethod === 3 ? "（" + degreeName() + "多项式）" : "") + '</p>';
+      html += pointsLine(model.xs, model.ys);
+
+      if (currentMethod === 1) html += lagrangeSteps(model);
+      else if (currentMethod === 2) html += newtonSteps(model);
+      else html += fitSteps(model);
+
+      if (model.evalXs.length) html += evalSteps(model);
+
+      html += '<p class="step-line"><b>结果</b> ' + resultText(model) + '</p>';
+
+      box.innerHTML = html;
+      card.style.display = "";
+    }
+
+    function hideSteps() {
+      var card = document.getElementById("stepsCard");
+      if (card) card.style.display = "none";
+    }
+
+    function basisNumText(xs, i) {
+      var parts = [];
+      for (var j = 0; j < xs.length; j++) {
+        if (j === i) continue;
+        if (xs[j] === 0) parts.push("x");
+        else parts.push("(x " + (xs[j] > 0 ? "− " : "+ ") + fmtNum(Math.abs(xs[j])) + ")");
+      }
+      return parts.join("") || "1";
+    }
+
+    function checkTable(model) {
+      var html = '<div class="step-table-wrap"><table class="step-table"><thead><tr>' +
+        '<th>i</th><th>xᵢ</th><th>yᵢ</th><th>' + fnName() + '(xᵢ)</th><th>差值</th>' +
+        '</tr></thead><tbody>';
+
+      for (var i = 0; i < model.xs.length; i++) {
+        var value = polyEval(model.coefs, model.xs[i]);
+        html += '<tr><td>' + i + '</td><td>' + fmtNum(model.xs[i]) + '</td><td>' + fmtNum(model.ys[i]) +
+          '</td><td>' + fmtNum(value) + '</td><td>' + fmtNum(value - model.ys[i]) + '</td></tr>';
+      }
+
+      return html + '</tbody></table></div>';
+    }
+
+    function lagrangeSteps(model) {
+      var html = "";
+      html += '<p class="step-formula">插值条件：P(xᵢ) = yᵢ。先构造基函数 lᵢ(x) = ∏ⱼ≠ᵢ (x − xⱼ)/(xᵢ − xⱼ)（满足 lᵢ(xᵢ) = 1、lᵢ(xⱼ) = 0），再作线性组合 P(x) = Σ yᵢ·lᵢ(x)</p>';
+
+      html += '<div class="step-table-wrap"><table class="step-table"><thead><tr>' +
+        '<th>i</th><th>lᵢ(x) 的分子</th><th>分母 ∏(xᵢ − xⱼ)</th><th>yᵢ</th><th>展开后的 yᵢ·lᵢ(x)</th>' +
+        '</tr></thead><tbody>';
+
+      for (var i = 0; i < model.basis.length; i++) {
+        var b = model.basis[i];
+        html += '<tr><td>' + i + '</td><td>' + basisNumText(model.xs, i) + '</td><td>' + fmtNum(b.den) +
+          '</td><td>' + fmtNum(b.y) + '</td><td>' + polyToString(b.coefs) + '</td></tr>';
+      }
+      html += '</tbody></table></div>';
+
+      html += '<p class="step-line"><b>逐项相加</b> P(x) = ';
+      for (i = 0; i < model.basis.length; i++) {
+        if (i) html += " + ";
+        html += fmtNum(model.basis[i].y) + "·l" + sub(i) + "(x)";
+      }
+      html += '</p>';
+      html += '<p class="step-line"><b>展开整理</b> P(x) = ' + polyToString(model.coefs) + '</p>';
+      html += '<p class="step-line"><b>校验</b> 把各 xᵢ 代入，结果应与 yᵢ 一致：</p>';
+      html += checkTable(model);
+      return html;
+    }
+
+    function newtonSteps(model) {
+      var n = model.xs.length;
+      var html = "";
+
+      html += '<p class="step-formula">牛顿插值：P(x) = f[x₀] + f[x₀,x₁](x − x₀) + f[x₀,x₁,x₂](x − x₀)(x − x₁) + ⋯，各阶差商由下表逐列算出</p>';
+
+      html += '<div class="step-table-wrap"><table class="step-table"><thead><tr><th>xᵢ</th><th>零阶差商</th>';
+      for (var k = 1; k < n; k++) html += '<th>' + orderName(k) + '差商</th>';
+      html += '</tr></thead><tbody>';
+
+      for (var i = 0; i < n; i++) {
+        html += '<tr><td>' + fmtNum(model.xs[i]) + '</td>';
+        for (var k2 = 0; k2 < n; k2++) {
+          if (k2 < n - i) html += '<td>' + fmtNum(model.table[i][k2]) + '</td>';
+          else html += '<td></td>';
+        }
+        html += '</tr>';
+      }
+      html += '</tbody></table></div>';
+
+      html += '<p class="step-line"><b>差商系数</b> ';
+      for (i = 0; i < model.dd.length; i++) {
+        if (i) html += "，";
+        html += (i === 0 ? "f[x" + sub(0) + "]" : "f[x" + sub(0) + "…x" + sub(i) + "]") + " = " + fmtNum(model.dd[i]);
+      }
+      html += '</p>';
+
+      html += '<p class="step-line"><b>展开整理</b> P(x) = ' + polyToString(model.coefs) + '</p>';
+      html += '<p class="step-line"><b>校验</b> 把各 xᵢ 代入，结果应与 yᵢ 一致：</p>';
+      html += checkTable(model);
+      return html;
+    }
+
+    function fitSteps(model) {
+      var m = model.deg;
+      var html = "";
+
+      var formula = "ŷ = a" + sub(0);
+      for (var t = 1; t <= m; t++) formula += " + a" + sub(t) + "x" + (t > 1 ? sup(t) : "");
+
+      html += '<p class="step-formula">设拟合多项式 ' + formula +
+        '，令 Q = Σ(yᵢ − ŷᵢ)² 取最小。对每个系数求偏导并令其为 0，得到法方程组（正规方程）</p>';
+
+      html += '<div class="step-table-wrap"><table class="step-table"><thead><tr><th></th>';
+      for (var j = 0; j <= m; j++) html += '<th>a' + sub(j) + '</th>';
+      html += '<th>右端</th></tr></thead><tbody>';
+
+      for (j = 0; j <= m; j++) {
+        html += '<tr><td>Σx' + sup(j) + '</td>';
+        for (var k = 0; k <= m; k++) html += '<td>' + fmtNum(model.A[j][k]) + '</td>';
+        html += '<td>' + fmtNum(model.b[j]) + '</td></tr>';
+      }
+      html += '</tbody></table></div>';
+
+      html += '<p class="step-line"><b>解出系数</b> ';
+      for (j = 0; j <= m; j++) {
+        if (j) html += "，";
+        html += "a" + sub(j) + " = " + fmtNum(model.coefs[j]);
+      }
+      html += '</p>';
+
+      html += '<p class="step-line"><b>拟合多项式</b> y = ' + polyToString(model.coefs) + '</p>';
+
+      html += '<div class="step-table-wrap"><table class="step-table"><thead><tr>' +
+        '<th>i</th><th>xᵢ</th><th>yᵢ</th><th>ŷᵢ</th><th>eᵢ = yᵢ − ŷᵢ</th>' +
+        '</tr></thead><tbody>';
+      for (var i = 0; i < model.xs.length; i++) {
+        html += '<tr><td>' + i + '</td><td>' + fmtNum(model.xs[i]) + '</td><td>' + fmtNum(model.ys[i]) +
+          '</td><td>' + fmtNum(model.fitted[i]) + '</td><td>' + fmtNum(model.residuals[i]) + '</td></tr>';
+      }
+      html += '</tbody></table></div>';
+
+      html += '<p class="step-line"><b>误差指标</b> SSE = Σeᵢ² = ' + fmtNum(model.sse) +
+        '，RMSE = ' + fmtNum(model.rmse) + '，R² = ' + fmtNum(model.r2) + '</p>';
+
+      return html;
+    }
+
+    function evalSteps(model) {
+      var html = '<p class="step-line"><b>求值点</b> 代入' + (currentMethod === 3 ? "拟合" : "插值") + '多项式：</p>';
+      html += '<div class="step-table-wrap"><table class="step-table"><thead><tr><th>#</th><th>x</th><th>' +
+        fnName() + '(x)</th></tr></thead><tbody>';
+
+      for (var i = 0; i < model.evalXs.length; i++) {
+        var x = model.evalXs[i];
+        html += '<tr><td>' + (i + 1) + '</td><td>' + fmtNum(x) + '</td><td>' +
+          fmtNum(polyEval(model.coefs, x)) + '</td></tr>';
+      }
+
+      return html + '</tbody></table></div>';
+    }
+
+    function copySteps() {
+      var card = document.getElementById("stepsCard");
+      var box = document.getElementById("steps");
+      if (!card || card.style.display === "none" || !box || !box.textContent.trim()) {
+        showToast("还没有可复制的过程");
+        return;
+      }
+      copyText(box.innerText || box.textContent);
+    }
+
+    /* ==========================================================
+       图示：散点 + 插值/拟合曲线 + 求值点 + 残差
+       ========================================================== */
+
+    var chartData = {
+      pairs: [],          // [{x, y}] 数据点
+      coefs: null,        // 曲线系数
+      evalXs: [],         // [{x, y}] 求值点
+      fitted: [],         // [{x, y}] 拟合值（用于画残差）
+      showResiduals: false
+    };
+
+    function chartCssVar(name, fallback) {
+      var value = getComputedStyle(document.body).getPropertyValue(name);
+      return (value && value.trim()) || fallback;
+    }
+
+    function chartTick(value) {
+      if (value === 0) return "0";
+      var abs = Math.abs(value);
+      if (abs >= 10000 || abs < 0.001) return value.toExponential(0);
+      return String(Number(value.toPrecision(6)));
+    }
+
+    function niceStep(span, target) {
+      var raw = span / Math.max(1, target);
+      var magnitude = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10));
+      var norm = raw / magnitude;
+      var step;
+      if (norm <= 1) step = 1;
+      else if (norm <= 2) step = 2;
+      else if (norm <= 2.5) step = 2.5;
+      else if (norm <= 5) step = 5;
+      else step = 10;
+      return step * magnitude;
+    }
+
+    function chartRoundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function livePairs() {
+      var rows = pointRows(), list = [];
+      for (var i = 0; i < rows.length; i++) {
+        var xText = stripSpaces(rows[i].querySelector("input.x").value);
+        var yText = stripSpaces(rows[i].querySelector("input.y").value);
+        if (xText === "" || yText === "") continue;
+
+        var x = Number(xText), y = Number(yText);
+        if (isFinite(x) && isFinite(y)) list.push({ x: x, y: y });
+      }
+      return list;
+    }
+
+    function renderChart(model) {
+      var pairs = [], i;
+
+      for (i = 0; i < model.xs.length; i++) pairs.push({ x: model.xs[i], y: model.ys[i] });
+
+      var evalXs = [];
+      for (i = 0; i < model.evalXs.length; i++) {
+        evalXs.push({ x: model.evalXs[i], y: polyEval(model.coefs, model.evalXs[i]) });
+      }
+
+      var fitted = [];
+      if (currentMethod === 3) {
+        for (i = 0; i < model.xs.length; i++) fitted.push({ x: model.xs[i], y: model.fitted[i] });
+      }
+
+      chartData.pairs = pairs;
+      chartData.coefs = model.coefs;
+      chartData.evalXs = evalXs;
+      chartData.fitted = fitted;
+      chartData.showResiduals = currentMethod === 3;
+
+      var tip = document.getElementById("chartTip");
+      if (tip) {
+        tip.textContent = currentMethod === 3
+          ? "实心点为原始数据点，曲线为最小二乘拟合多项式，竖直虚线是各点残差 yᵢ − ŷᵢ；空心点为求值点。"
+          : "实心点为插值数据点，曲线为穿过所有点的插值多项式；空心点为求值点。";
+      }
+
+      drawChart();
+    }
+
+    function drawChart() {
+      var canvas = document.getElementById("chart");
+      if (!canvas) return;
+
+      var width = canvas.clientWidth;
+      var height = canvas.clientHeight;
+      if (!width || !height) return;
+
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      if (canvas.width !== Math.round(width * dpr) || canvas.height !== Math.round(height * dpr)) {
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+      }
+
+      var ctx = canvas.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+
+      var accent = chartCssVar("--accent", "#7c3aed");
+      var accent2 = chartCssVar("--accent-2", "#0ea5e9");
+      var accentInk = chartCssVar("--accent-ink", "#5b21b6");
+      var gridColor = chartCssVar("--line", "#e6e9f6");
+      var muted = chartCssVar("--muted", "#6c7496");
+
+      var pairs = chartData.pairs.length ? chartData.pairs : livePairs();
+      var coefs = chartData.coefs;
+
+      if (!pairs.length && !coefs) {
+        ctx.font = "13px 'PingFang SC','Microsoft YaHei',system-ui,sans-serif";
+        ctx.fillStyle = muted;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("填好数据点后显示散点与曲线", width / 2, height / 2);
+        return;
+      }
+
+      // —— 横轴范围 ——
+      var xs = [];
+      var i;
+      for (i = 0; i < pairs.length; i++) xs.push(pairs[i].x);
+      for (i = 0; i < chartData.evalXs.length; i++) xs.push(chartData.evalXs[i].x);
+      if (!xs.length) return;
+
+      var minX = Math.min.apply(null, xs);
+      var maxX = Math.max.apply(null, xs);
+      var spanX = maxX - minX;
+      if (!(spanX > 1e-9)) spanX = Math.abs(maxX) * 0.2 + 1;
+      var vx0 = minX - spanX * 0.12;
+      var vx1 = maxX + spanX * 0.12;
+
+      // —— 采样曲线 ——
+      var count = Math.min(900, Math.max(280, Math.round(width * 1.3)));
+      var samples = [];
+      var ys = [];
+      for (i = 0; i <= count; i++) {
+        var sx = vx0 + (vx1 - vx0) * i / count;
+        var sy = coefs ? polyEval(coefs, sx) : NaN;
+        samples.push(sy);
+        if (isFinite(sy)) ys.push(sy);
+      }
+      for (i = 0; i < pairs.length; i++) if (isFinite(pairs[i].y)) ys.push(pairs[i].y);
+      for (i = 0; i < chartData.evalXs.length; i++) if (isFinite(chartData.evalXs[i].y)) ys.push(chartData.evalXs[i].y);
+      ys.push(0);
+
+      if (!ys.length) {
+        ctx.font = "13px 'PingFang SC','Microsoft YaHei',system-ui,sans-serif";
+        ctx.fillStyle = muted;
+        ctx.textAlign = "center";
+        ctx.fillText("当前没有有效数据", width / 2, height / 2);
+        return;
+      }
+
+      var sorted = ys.slice().sort(function (a, b) { return a - b; });
+      var last = sorted.length - 1;
+      var lo = sorted[0];
+      var hi = sorted[last];
+      var trimLo = sorted[Math.floor(last * 0.03)];
+      var trimHi = sorted[Math.ceil(last * 0.97)];
+      if (trimHi > trimLo && (trimHi - trimLo) < 0.55 * (hi - lo)) {
+        var trimPad = (trimHi - trimLo) * 0.25;
+        lo = trimLo - trimPad;
+        hi = trimHi + trimPad;
+      }
+      if (!(hi - lo > 1e-12)) { lo -= 1; hi += 1; }
+      var padY = (hi - lo) * 0.14;
+      var vy0 = lo - padY;
+      var vy1 = hi + padY;
+
+      function toPx(v) { return (v - vx0) / (vx1 - vx0) * width; }
+      function toPy(v) { return height - (v - vy0) / (vy1 - vy0) * height; }
+
+      // —— 网格 ——
+      var stepX = niceStep(vx1 - vx0, Math.max(2, Math.floor(width / 70)));
+      var stepY = niceStep(vy1 - vy0, Math.max(2, Math.floor(height / 50)));
+      var k, gx, gy, px, py;
+
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = gridColor;
+      for (k = Math.ceil(vx0 / stepX); k * stepX <= vx1 + 1e-9; k++) {
+        px = toPx(k * stepX);
+        ctx.beginPath();
+        ctx.moveTo(px, 0);
+        ctx.lineTo(px, height);
+        ctx.stroke();
+      }
+      for (k = Math.ceil(vy0 / stepY); k * stepY <= vy1 + 1e-9; k++) {
+        py = toPy(k * stepY);
+        ctx.beginPath();
+        ctx.moveTo(0, py);
+        ctx.lineTo(width, py);
+        ctx.stroke();
+      }
+
+      // —— 坐标轴 ——
+      var zeroY = (vy0 <= 0 && vy1 >= 0) ? toPy(0) : null;
+      var zeroX = (vx0 <= 0 && vx1 >= 0) ? toPx(0) : null;
+      ctx.strokeStyle = "rgba(23, 28, 52, 0.35)";
+      ctx.lineWidth = 1.2;
+      if (zeroY !== null) {
+        ctx.beginPath();
+        ctx.moveTo(0, zeroY);
+        ctx.lineTo(width, zeroY);
+        ctx.stroke();
+      }
+      if (zeroX !== null) {
+        ctx.beginPath();
+        ctx.moveTo(zeroX, 0);
+        ctx.lineTo(zeroX, height);
+        ctx.stroke();
+      }
+
+      // —— 刻度 ——
+      ctx.font = "11px 'PingFang SC','Microsoft YaHei',system-ui,sans-serif";
+      ctx.fillStyle = muted;
+
+      var textY = zeroY !== null ? Math.min(height - 4, zeroY + 14) : height - 6;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "alphabetic";
+      for (k = Math.ceil(vx0 / stepX); k * stepX <= vx1 + 1e-9; k++) {
+        gx = k * stepX;
+        if (Math.abs(gx) < stepX * 1e-6) continue;
+        ctx.fillText(chartTick(gx), toPx(gx), textY);
+      }
+
+      if (zeroX !== null && zeroY !== null) {
+        ctx.textAlign = "right";
+        ctx.fillText("0", zeroX - 5, textY);
+      }
+
+      var textX = zeroX !== null ? Math.min(width - 4, zeroX - 6) : 4;
+      ctx.textAlign = zeroX !== null ? "right" : "left";
+      ctx.textBaseline = "middle";
+      for (k = Math.ceil(vy0 / stepY); k * stepY <= vy1 + 1e-9; k++) {
+        gy = k * stepY;
+        if (Math.abs(gy) < stepY * 1e-6) continue;
+        ctx.fillText(chartTick(gy), textX, toPy(gy));
+      }
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, width, height);
+      ctx.clip();
+
+      // —— 残差（最小二乘） ——
+      if (chartData.showResiduals && chartData.fitted.length) {
+        ctx.save();
+        ctx.strokeStyle = accent2;
+        ctx.globalAlpha = 0.55;
+        ctx.lineWidth = 1.3;
+        if (typeof ctx.setLineDash === "function") ctx.setLineDash([3, 3]);
+        for (i = 0; i < chartData.fitted.length; i++) {
+          var fp = chartData.fitted[i];
+          if (!isFinite(fp.y) || !isFinite(pairs[i] ? pairs[i].y : NaN)) continue;
+          ctx.beginPath();
+          ctx.moveTo(toPx(fp.x), toPy(fp.y));
+          ctx.lineTo(toPx(fp.x), toPy(pairs[i].y));
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // —— 曲线 ——
+      if (coefs) {
+        var gradient = ctx.createLinearGradient(0, 0, width, height);
+        gradient.addColorStop(0, accent);
+        gradient.addColorStop(1, accent2);
+
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 2.4;
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        ctx.beginPath();
+
+        var started = false;
+        var prevY = NaN;
+        var jumpLimit = (vy1 - vy0) * 3;
+
+        for (i = 0; i <= count; i++) {
+          var yy = samples[i];
+          if (!isFinite(yy)) { started = false; prevY = NaN; continue; }
+
+          px = toPx(vx0 + (vx1 - vx0) * i / count);
+          py = toPy(yy);
+          if (py > height * 20) py = height * 20;
+          else if (py < -height * 20) py = -height * 20;
+
+          if (!started || (isFinite(prevY) && Math.abs(yy - prevY) > jumpLimit)) {
+            ctx.moveTo(px, py);
+            started = true;
+          } else {
+            ctx.lineTo(px, py);
+          }
+          prevY = yy;
+        }
+        ctx.stroke();
+      }
+
+      // —— 数据点 ——
+      for (i = 0; i < pairs.length; i++) {
+        var p = pairs[i];
+        if (!isFinite(p.x) || !isFinite(p.y)) continue;
+        var ppx = toPx(p.x);
+        var ppy = toPy(p.y);
+        if (ppx < -10 || ppx > width + 10 || ppy < -10 || ppy > height + 10) continue;
+
+        ctx.beginPath();
+        ctx.arc(ppx, ppy, 4, 0, Math.PI * 2);
+        ctx.fillStyle = accent;
+        ctx.fill();
+        ctx.lineWidth = 1.6;
+        ctx.strokeStyle = "#fff";
+        ctx.stroke();
+      }
+
+      // —— 求值点 ——
+      for (i = 0; i < chartData.evalXs.length; i++) {
+        var ep = chartData.evalXs[i];
+        if (!isFinite(ep.x) || !isFinite(ep.y)) continue;
+
+        var epx = toPx(ep.x);
+        var epy = toPy(ep.y);
+        if (epx < -10 || epx > width + 10 || epy < -10 || epy > height + 10) continue;
+
+        ctx.beginPath();
+        ctx.arc(epx, epy, 4.4, 0, Math.PI * 2);
+        ctx.fillStyle = "#fff";
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = accentInk;
+        ctx.stroke();
+      }
+
+      ctx.restore();
+
+      // —— 求值点标签（在裁剪区外画，避免被截断） ——
+      ctx.font = "600 11.5px 'PingFang SC','Microsoft YaHei',system-ui,sans-serif";
+      for (i = 0; i < chartData.evalXs.length; i++) {
+        var lp = chartData.evalXs[i];
+        if (!isFinite(lp.x) || !isFinite(lp.y)) continue;
+
+        var lpx = toPx(lp.x);
+        var lpy = toPy(lp.y);
+        if (lpx < 0 || lpx > width || lpy < 0 || lpy > height) continue;
+
+        var text = fnName() + "(" + chartTick(lp.x) + ") = " + chartTick(lp.y);
+        var textW = ctx.measureText(text).width;
+
+        var boxW = textW + 12;
+        var boxH = 19;
+        var boxX = lpx + 8;
+        var boxY = lpy - boxH - 8;
+        if (boxX + boxW > width - 2) boxX = lpx - boxW - 8;
+        if (boxY < 2) boxY = lpy + 8;
+
+        chartRoundRect(ctx, boxX, boxY, boxW, boxH, 7);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.94)";
+        ctx.fill();
+        ctx.lineWidth = 1.1;
+        ctx.strokeStyle = accentInk;
+        ctx.stroke();
+
+        ctx.fillStyle = accentInk;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, boxX + boxW / 2, boxY + boxH / 2 + 0.5);
+      }
+    }
+
+    /* ---------- 初始化 ---------- */
+
+    renderPoints(defaultPoints);
+    selectMethod(1);
+    syncDegreeTabs();
+
+    document.addEventListener("DOMContentLoaded", function () {
+      ElementId = "px0";
+      syncEcho();
+      drawChart();
+
+      var resizeTimer = null;
+      window.addEventListener("resize", function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(drawChart, 120);
+      });
+    });
+  </script>
+</body>
+
+</html>
